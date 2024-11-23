@@ -1,9 +1,13 @@
-import io
-from zipfile import ZipFile
-from pdf2image import convert_from_bytes
+import os
+import zipfile
+import fitz  # PyMuPDF
+from io import BytesIO
 
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
+from django.core.files.storage import FileSystemStorage
+
+from pdf_to_img.settings import PDF_MAX_SIZE
 
 
 def upload_pdf(request):
@@ -12,43 +16,41 @@ def upload_pdf(request):
 
         uploaded_file = request.FILES['file']
 
-        # 1. 判断文件类型是否为 PDF
         if uploaded_file.content_type != 'application/pdf':
-            return JsonResponse({'error': 'The uploaded file is not a PDF.'}, status=400)
+            error_msg = 'The uploaded file is not a PDF.'
+            return JsonResponse({'error': error_msg}, status=400)
 
-        # 2. 判断文件大小是否超过 10MB
-        if uploaded_file.size > 10 * 1024 * 1024:  # 10MB
-            return JsonResponse({'error': 'The uploaded PDF file exceeds the 10MB size limit.'}, status=400)
+        if uploaded_file.size > PDF_MAX_SIZE:
+            max_size_mb = PDF_MAX_SIZE / 1024 / 1024
+            error_msg = f'The uploaded PDF file exceeds the {max_size_mb} MB size limit.'
+            return JsonResponse({'error': error_msg}, status=400)
 
+        fs = FileSystemStorage(location='/tmp')
+        filename = fs.save(uploaded_file.name, uploaded_file)
+        file_path = fs.path(filename)
+
+        images = []
         try:
-            # 3. 使用 BytesIO 处理文件内容
-            pdf_file = io.BytesIO(uploaded_file.read())
-
-            # 4. 使用 pdf2image 将 PDF 文件转换为图像
-            pdf_bytes = pdf_file.read()  # 获取字节数据
-            images = convert_from_bytes(pdf_bytes, dpi=300)
-
-            # 创建一个内存中的 Zip 文件
-            zip_buffer = io.BytesIO()
-            with ZipFile(zip_buffer, 'w') as zip_file:
-                for i, image in enumerate(images):
-                    # 将每个图像保存为 PNG 格式到内存
-                    image_buffer = io.BytesIO()
-                    image.save(image_buffer, format='PNG')
-                    image_buffer.seek(0)  # 重置内存文件指针
-
-                    # 将图像添加到 ZIP 文件
-                    image_filename = f"page_{i + 1}.png"
-                    zip_file.writestr(image_filename, image_buffer.read())
-
-            # 将 zip 文件内容写入响应并返回给前端
-            zip_buffer.seek(0)
-            response = HttpResponse(zip_buffer, content_type='application/zip')
-            response['Content-Disposition'] = 'attachment; filename="converted_images.zip"'
-
-            return response
-
+            doc = fitz.open(file_path)
+            for page_number in range(len(doc)):
+                page = doc[page_number]
+                pix = page.get_pixmap()
+                img_bytes = BytesIO(pix.tobytes("png"))
+                images.append((f'page_{page_number + 1}.png', img_bytes))
+            doc.close()
         except Exception as e:
-            return JsonResponse({'error': f'An error occurred while processing the PDF: {str(e)}'}, status=500)
+            return JsonResponse({'error': f'Failed to process PDF: {str(e)}'}, status=500)
+        finally:
+            os.remove(file_path)
+
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
+            for image_name, image_data in images:
+                zip_file.writestr(image_name, image_data.getvalue())
+
+        zip_buffer.seek(0)
+        response = HttpResponse(zip_buffer, content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="converted_images.zip"'
+        return response
 
     return render(request, 'pdf_to_img/upload.html')
