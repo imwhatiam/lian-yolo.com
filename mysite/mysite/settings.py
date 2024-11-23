@@ -144,7 +144,6 @@ LOGGING = {
     },
 }
 
-
 local_settings_path = os.path.join(BASE_DIR, 'local_settings.py')
 if os.path.exists(local_settings_path):
     with open(local_settings_path) as f:
