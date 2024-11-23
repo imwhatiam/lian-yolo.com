@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -121,3 +122,10 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+local_settings_path = os.path.join(BASE_DIR, 'local_settings.py')
+if os.path.exists(local_settings_path):
+    with open(local_settings_path) as f:
+        code = compile(f.read(), local_settings_path, 'exec')
+        exec(code)
