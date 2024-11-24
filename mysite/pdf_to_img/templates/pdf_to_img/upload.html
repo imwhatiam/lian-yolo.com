@@ -3,21 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Upload</title>
+    <title>PDF to Image</title>
 </head>
 <body>
-    <h2>Upload a File</h2>
-
-    <!-- 文件上传表单 -->
+    <h2>Upload a PDF File</h2>
     <form action="/pdf-to-img/" method="POST" enctype="multipart/form-data">
-        <!-- CSRF Token (如果需要的话) -->
         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-
-        <!-- 文件选择 -->
         <input type="file" name="file" accept="*/*" required>
-
-        <!-- 提交按钮 -->
-        <p><button type="submit">Upload</button></p>
+        <p><button type="submit">Convert</button></p>
     </form>
 </body>
 </html>
