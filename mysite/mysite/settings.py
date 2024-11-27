@@ -57,7 +57,7 @@ ROOT_URLCONF = 'mysite.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'mysite/templates'), ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -129,7 +129,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Customer Settings
 TIME_ZONE = 'Asia/Shanghai'
 
-ALLOWED_HOSTS = ['tools.lian-yolo.com']
+ALLOWED_HOSTS = ['tools.lian-yolo.com', '127.0.0.1']
 # CSRF_TRUSTED_ORIGINS = ['http://39.103.49.97']
 STATIC_ROOT = '/root/lian-yolo.com/mysite/static'
 
@@ -172,3 +172,10 @@ LOGGING = {
 }
 
 PDF_MAX_SIZE = 5 * 1024 * 1024
+
+# for dev env
+local_settings_path = os.path.join(BASE_DIR, '../local_settings.py')
+if os.path.exists(local_settings_path):
+    with open(local_settings_path) as f:
+        code = compile(f.read(), local_settings_path, 'exec')
+        exec(code)

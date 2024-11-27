@@ -1,18 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF to Image</title>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block title %}PDF to Image{% endblock %}
+
+{% block content %}
     <h2>Upload a PDF File</h2>
     <h3>Limit to a maximum of 10 conversions every 24 hours.</h3>
     <h3>The maximum supported file size is 5 MB.</h3>
     <form action="/pdf-to-img/" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-        <input type="file" name="file" accept="*/*" required>
+        <input type="file" name="file" accept="application/pdf" required>
         <p><button type="submit">Convert</button></p>
     </form>
-</body>
-</html>
+{% endblock %}
+
+{% block script %}
+<script>
+    // JavaScript logic for file validation or user interaction
+    document.querySelector('input[type="file"]').addEventListener('change', function (event) {
+        const file = event.target.files[0];
+        if (file && file.type !== 'application/pdf') {
+            alert('Please upload a valid PDF file.');
+            event.target.value = ''; // Reset the file input
+        }
+    });
+</script>
+{% endblock %}
+
