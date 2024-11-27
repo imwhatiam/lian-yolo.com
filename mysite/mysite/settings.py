@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'pdf_to_img',
+    'douban',
 ]
 
 MIDDLEWARE = [
