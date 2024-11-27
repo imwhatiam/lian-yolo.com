@@ -125,27 +125,50 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+
+# Customer Settings
+TIME_ZONE = 'Asia/Shanghai'
+
+ALLOWED_HOSTS = ['tools.lian-yolo.com']
+# CSRF_TRUSTED_ORIGINS = ['http://39.103.49.97']
+STATIC_ROOT = '/root/lian-yolo.com/mysite/static'
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'lian',
+        'OPTIONS': {
+            'read_default_file': '/etc/mysql/mysql.conf.d/mysqld.cnf',
+        },
+    }
+}
+
 LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "file": {
-            "level": "DEBUG",
-            "class": "logging.FileHandler",
-            "filename": "/tmp/lian-yolo.com.log",
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '%(asctime)s [%(levelname)s] %(name)s:%(lineno)s %(funcName)s %(message)s'
         },
     },
-    "loggers": {
-        "django": {
-            "handlers": ["file"],
-            "level": "DEBUG",
-            "propagate": True,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': '/tmp/lian-yolo.com.log',
+            'formatter': 'standard',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
         },
     },
 }
 
-local_settings_path = os.path.join(BASE_DIR, 'local_settings.py')
-if os.path.exists(local_settings_path):
-    with open(local_settings_path) as f:
-        code = compile(f.read(), local_settings_path, 'exec')
-        exec(code)
+PDF_MAX_SIZE = 5 * 1024 * 1024

@@ -102,7 +102,7 @@ def upload_pdf(request):
             doc = fitz.open(file_path)
             for page_number in range(len(doc)):
                 page = doc[page_number]
-                pix = page.get_pixmap(dpi=150)
+                pix = page.get_pixmap(dpi=300)
                 img_bytes = BytesIO(pix.tobytes("png"))
                 images.append((f'{uploaded_file.name}_{page_number + 1}.png', img_bytes))
             doc.close()
