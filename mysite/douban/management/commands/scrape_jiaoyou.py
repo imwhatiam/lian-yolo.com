@@ -1,7 +1,9 @@
 import time
 import requests
 from bs4 import BeautifulSoup
+
 from django.core.management.base import BaseCommand
+
 from douban.models import DoubanPost
 
 
@@ -11,19 +13,23 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+        user_agent = (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        )
+
         headers = {'User-Agent': user_agent}
 
-        group_id = '641424'
         start = 0
+        group_id = '641424'
         skipped_list = ['193662234', '198931411']
 
         while start < 300:
 
-            time.sleep(5)
             url = f"https://www.douban.com/group/{group_id}/discussion?start={start}"
+            self.stdout.write(f"Scraping: {url}")
+
             start += 25
-            print(f"Scraping: {url}")
 
             try:
                 response = requests.get(url, headers=headers)
@@ -79,3 +85,5 @@ class Command(BaseCommand):
                 except Exception as e:
                     self.stderr.write(f"Error processing row: {row}")
                     self.stderr.write(str(e))
+
+            time.sleep(5)
