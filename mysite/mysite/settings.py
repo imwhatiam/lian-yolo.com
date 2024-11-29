@@ -130,7 +130,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Customer Settings
 TIME_ZONE = 'Asia/Shanghai'
 
-ALLOWED_HOSTS = ['tools.lian-yolo.com', '127.0.0.1']
+ALLOWED_HOSTS = ['tools.lian-yolo.com', '39.103.49.97', '127.0.0.1']
 # CSRF_TRUSTED_ORIGINS = ['http://39.103.49.97']
 STATIC_ROOT = '/root/lian-yolo.com/mysite/static'
 
@@ -143,6 +143,7 @@ DATABASES = {
         'NAME': 'lian',
         'OPTIONS': {
             'read_default_file': '/etc/mysql/mysql.conf.d/mysqld.cnf',
+            'charset': 'utf8mb4',
         },
     }
 }
