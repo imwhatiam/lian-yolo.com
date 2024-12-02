@@ -5,16 +5,14 @@ from .models import DoubanPost
 
 def jiaoyou(request):
 
-    only_good = request.GET.get('only_good', 'false') == 'true'
-    is_new = request.GET.get('is_new', 'false') == 'true'
+    only_good = request.GET.get('only_good', 'true') == 'true'
+    is_new = request.GET.get('is_new', 'true') == 'true'
 
-    if not only_good and not is_new:
-        posts = DoubanPost.objects.all()
-    else:
-        if only_good:
-            posts = DoubanPost.objects.filter(good=True)
-        if is_new:
-            posts = DoubanPost.objects.filter(is_new=True)
+    posts = DoubanPost.objects.all()
+    if only_good:
+        posts = posts.filter(good=True)
+    if is_new:
+        posts = posts.filter(is_new=True)
 
     posts = posts.order_by('-is_new')
     posts = posts.order_by('-last_reply')
@@ -26,7 +24,8 @@ def jiaoyou(request):
 
     data = {
         'page_obj': page_obj,
-        'only_good': only_good
+        'only_good': only_good,
+        'is_new': is_new,
     }
     return render(request, 'douban/jiaoyou.html', data)
 
