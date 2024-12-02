@@ -6,11 +6,15 @@ from .models import DoubanPost
 def jiaoyou(request):
 
     only_good = request.GET.get('only_good', 'false') == 'true'
+    is_new = request.GET.get('is_new', 'false') == 'true'
 
-    if only_good:
-        posts = DoubanPost.objects.filter(good=True)
-    else:
+    if not only_good and not is_new:
         posts = DoubanPost.objects.all()
+    else:
+        if only_good:
+            posts = DoubanPost.objects.filter(good=True)
+        if is_new:
+            posts = DoubanPost.objects.filter(is_new=True)
 
     posts = posts.order_by('-is_new')
     posts = posts.order_by('-last_reply')

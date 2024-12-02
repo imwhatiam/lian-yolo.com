@@ -13,6 +13,12 @@
             <option value="true" {% if only_good == 'true' %}selected{% endif %}>是</option>
             <option value="false" {% if only_good == 'false' %}selected{% endif %}>否</option>
         </select>
+        <label for="is_new">只看新更新：</label>
+        <select name="is_new" id="is_new">
+            <option value="">所有</option>
+            <option value="true" {% if is_new == 'true' %}selected{% endif %}>是</option>
+            <option value="false" {% if is_new == 'false' %}selected{% endif %}>否</option>
+        </select>
         <button type="submit">搜索</button>
     </form>
 
