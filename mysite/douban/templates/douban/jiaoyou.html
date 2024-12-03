@@ -18,6 +18,8 @@
             <option value="">所有</option>
             <option value="true" {% if is_new %}selected{% endif %}>是</option>
         </select>
+        <label for="title">搜索标题</label>
+        <input type="text" name="title" id="title" value="{{ title|default:'' }}">
         <button type="submit">搜索</button>
     </form>
 

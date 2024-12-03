@@ -7,12 +7,15 @@ def jiaoyou(request):
 
     only_good = request.GET.get('only_good', 'true') == 'true'
     is_new = request.GET.get('is_new', 'true') == 'true'
+    title = request.GET.get('title', '')
 
     posts = DoubanPost.objects.all()
     if only_good:
         posts = posts.filter(good=True)
     if is_new:
         posts = posts.filter(is_new=True)
+    if title:
+        posts = posts.filter(title__icontains=title)
 
     posts = posts.order_by('-is_new')
     posts = posts.order_by('-last_reply')
@@ -26,6 +29,7 @@ def jiaoyou(request):
         'page_obj': page_obj,
         'only_good': only_good,
         'is_new': is_new,
+        'title': title,
     }
     return render(request, 'douban/jiaoyou.html', data)
 
