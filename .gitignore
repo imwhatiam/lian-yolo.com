@@ -2,6 +2,7 @@ mysite/static/
 mysite/stock-data/
 *.log
 *.swp
+*.DS_Store
 # requirements.txt
 
 # Byte-compiled / optimized / DLL files
