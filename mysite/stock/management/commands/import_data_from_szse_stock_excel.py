@@ -1,34 +1,48 @@
 import os
 import pytz
+import datetime
 import pandas as pd
 from decimal import Decimal
 
 from django.utils.timezone import make_aware
 from django.core.management.base import BaseCommand
 
+from mysite.utils import normalize_folder_path
 from stock.models import StockBasicInfo
 
 
 class Command(BaseCommand):
 
-    help = "Import stock data from an Excel file"
+    help = "Import stock data from szse Excel file"
 
     def add_arguments(self, parser):
+
         parser.add_argument(
-            "file_path",
+            "--date",
             type=str,
-            help="Path to the Excel file containing stock data."
+            nargs="?",  # Makes 'date' argument optional
+            default=datetime.date.today().strftime('%Y-%m-%d'),
+            help="Date in YYYY-MM-DD format"
+        )
+        parser.add_argument(
+            "--stock_excel_parent_folder",
+            type=str,
+            nargs="?",  # Makes 'date' argument optional
+            default="/root/stock-excel/",  # Default save path
+            help="Path to save the downloaded file (default: /tmp/)"
         )
 
     def handle(self, *args, **kwargs):
-        file_path = kwargs["file_path"]
+        date_str = kwargs["date"]
+        stock_excel_parent_folder = normalize_folder_path(kwargs["stock_excel_parent_folder"])
+        stock_excel_file = f"{stock_excel_parent_folder}stock_data_{date_str}.xlsx"
 
-        if not os.path.exists(file_path):
-            self.stderr.write(self.style.ERROR(f"File not found: {file_path}"))
+        if not os.path.exists(stock_excel_file):
+            self.stderr.write(self.style.ERROR(f"File not found: {stock_excel_file}"))
             return
 
         try:
-            df = pd.read_excel(file_path,
+            df = pd.read_excel(stock_excel_file,
                                engine='openpyxl',
                                parse_dates=["交易日期"])
 
