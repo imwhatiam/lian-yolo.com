@@ -24,4 +24,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('pdf-to-img/', include('pdf_to_img.urls')),
     path('douban/', include('douban.urls')),
+    path('stock/', include('stock.urls')),
 ]

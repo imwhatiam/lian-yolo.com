@@ -41,6 +41,7 @@ INSTALLED_APPS = [
 
     'pdf_to_img',
     'douban',
+    'stock',
 ]
 
 MIDDLEWARE = [
@@ -174,6 +175,8 @@ LOGGING = {
 }
 
 PDF_MAX_SIZE = 5 * 1024 * 1024
+
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 
 # for dev env
 local_settings_path = os.path.join(BASE_DIR, '../local_settings.py')
