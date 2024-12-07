@@ -12,7 +12,7 @@ from mysite.utils import normalize_folder_path
 from stock.models import StockBasicInfo
 
 BASE_DIR = normalize_folder_path(str(BASE_DIR))
-STOCK_EXCEL_PARENT_FOLDER = f'{BASE_DIR}stock-data/'
+STOCK_EXCEL_PARENT_FOLDER = f'{BASE_DIR}stock/stock-data/'
 
 
 class Command(BaseCommand):

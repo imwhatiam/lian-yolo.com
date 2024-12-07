@@ -9,7 +9,7 @@ from mysite.settings import BASE_DIR
 from mysite.utils import normalize_folder_path
 
 BASE_DIR = normalize_folder_path(str(BASE_DIR))
-STOCK_EXCEL_PARENT_FOLDER = f'{BASE_DIR}stock-data/'
+STOCK_EXCEL_PARENT_FOLDER = f'{BASE_DIR}stock/stock-data/'
 
 if not os.path.exists(STOCK_EXCEL_PARENT_FOLDER):
     os.makedirs(STOCK_EXCEL_PARENT_FOLDER)
