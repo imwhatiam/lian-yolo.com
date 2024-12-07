@@ -1,10 +1,18 @@
+import os
 import random
 import requests
 import datetime
 
 from django.core.management.base import BaseCommand
 
+from mysite.settings import BASE_DIR
 from mysite.utils import normalize_folder_path
+
+BASE_DIR = normalize_folder_path(str(BASE_DIR))
+STOCK_EXCEL_PARENT_FOLDER = f'{BASE_DIR}stock-data/'
+
+if not os.path.exists(STOCK_EXCEL_PARENT_FOLDER):
+    os.makedirs(STOCK_EXCEL_PARENT_FOLDER)
 
 
 class Command(BaseCommand):
@@ -24,7 +32,7 @@ class Command(BaseCommand):
             "--stock_excel_parent_folder",
             type=str,
             nargs="?",  # Makes 'date' argument optional
-            default="/root/stock-excel/",  # Default save path
+            default=STOCK_EXCEL_PARENT_FOLDER,  # Default save path
             help="Path to save the downloaded file (default: /tmp/)"
         )
 

@@ -1,6 +1,8 @@
 mysite/static/
-requirements.txt
+mysite/stock-data/
 *.log
+*.swp
+# requirements.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
