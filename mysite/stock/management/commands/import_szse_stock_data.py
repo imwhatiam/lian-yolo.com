@@ -63,7 +63,7 @@ class Command(BaseCommand):
 
             for _, row in df.iterrows():
                 date = make_aware(row["交易日期"], timezone=pytz.timezone("Asia/Shanghai"))
-                code = row["证券代码"]
+                code = str(row["证券代码"])
 
                 stock = StockBasicInfo.objects.filter(date=date, code=code).first()
 

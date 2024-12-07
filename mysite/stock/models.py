@@ -15,3 +15,9 @@ class StockBasicInfo(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        # 自动补齐 code 字段为 6 位
+        if self.code:
+            self.code = self.code.zfill(6)
+        super().save(*args, **kwargs)
