@@ -1,5 +1,5 @@
 mysite/static/
-mysite/stock-data/
+mysite/stock/stock-data/
 *.log
 *.swp
 *.DS_Store
