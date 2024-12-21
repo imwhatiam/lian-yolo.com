@@ -4,5 +4,5 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') - Running download_and_import_szse_stock_data
 source /Users/lian/python3.12-venv/bin/activate
 cd /Users/lian/lian-yolo.com/mysite
 
-python manage.py download_szse_stock_data --date "$DATE_PARAM" >> /tmp/lian-yolo.com.log  2>&1
-python manage.py import_szse_stock_data --date "$DATE_PARAM" >> /tmp/lian-yolo.com.log  2>&1
+python manage.py download_szse_stock_data >> /tmp/download-szse-stock-data.log
+# python manage.py import_szse_stock_data >> /tmp/import-szse-stock-data.log
