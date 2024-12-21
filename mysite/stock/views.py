@@ -1,8 +1,13 @@
 import pandas as pd
+
 from django.shortcuts import render
+from django.views.decorators.cache import cache_page
+
 from .models import StockBasicInfo
 
 
+# Cache this view for 24 hours
+@cache_page(60 * 60 * 24)
 def fupan(request):
 
     last_x_days = request.GET.get('last_x_days', 20)
@@ -19,6 +24,7 @@ def fupan(request):
     distinct_codes = StockBasicInfo.objects.values('code').distinct()
     codes_list = [code_dict['code'] for code_dict in distinct_codes]
 
+    result = []
     for code in codes_list:
 
         # get latest X days data for each stock
@@ -47,7 +53,6 @@ def fupan(request):
             df.groupby('code')['close_price'].pct_change() * 100
         ).round(2)
 
-        result = []
         for i, row in df.iterrows():
 
             # 1. 涨幅大于 x%
