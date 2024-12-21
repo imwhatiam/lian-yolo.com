@@ -82,6 +82,8 @@ def fupan(request):
                                 })
                                 break  # 找到符合条件的，不再检查下一个范围
 
+    result = sorted(result, key=lambda x: x['date'], reverse=True)
+
     data = {
         'last_x_days': last_x_days,
         'big_increase_rate': big_increase_rate,
