@@ -1,12 +1,38 @@
 {% extends "base.html" %}
 
-{% block title %}豆瓣交友信息汇总{% endblock %}
+{% block title %}选股{% endblock %}
 
 {% block content %}
-    <h2>K-line Chart for Stock</h2>
-    <div>
-        <img src="{% url 'stock_fupan' %}" alt="K-Line Chart">
-    </div>
+    <h2>大涨后高位横盘, 选股逻辑:</h2>
+    <ol>
+        <li>取每只个股最近 {{ last_x_days }} 天的数据</li>
+        <li>找到涨幅大于 {{ big_increase_rate }}% 的那天</li>
+        <li>之后 3-5 天, 每天的涨跌不超过 {{ increase_rate_after }}%</li>
+        <li>第 3(或4或5) 天的收盘价较大涨幅那天, 涨跌不超过 {{ increase_rate_after }}%</li>
+    </ol>
+
+    <table>
+        <thead>
+            <tr>
+                <th>大涨那天</th>
+                <th>股票代码</th>
+                <th>股票名称</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stock in stock_list %}
+                <tr>
+                    <td>{{ stock.date }}</td>
+                    <td>{{ stock.code }}</td>
+                    <td>{{ stock.name }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6">没有找到数据</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 {% endblock %}
 
 {% block script %}
