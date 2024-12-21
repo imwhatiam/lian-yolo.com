@@ -70,6 +70,8 @@ class Command(BaseCommand):
             should_pass, error_msg = is_weekend_or_holiday(date_str)
             if should_pass:
                 self.stderr.write(self.style.ERROR(error_msg))
+                record_count = StockBasicInfo.objects.filter(date=date_str).count()
+                self.stderr.write(self.style.ERROR(f"Record count: {record_count}"))
                 continue
 
             stock_excel_file = f"{stock_excel_parent_folder}stock_data_{date_str}.xlsx"
