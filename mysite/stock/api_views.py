@@ -37,5 +37,5 @@ class StockBasicInfoAPIView(APIView):
                 },
             )
 
-            return Response({"message": "Record created successfully."},
-                            status=status.HTTP_201_CREATED)
+        return Response({"message": "Record created successfully."},
+                        status=status.HTTP_201_CREATED)
