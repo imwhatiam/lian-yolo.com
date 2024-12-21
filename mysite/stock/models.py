@@ -13,6 +13,11 @@ class StockBasicInfo(models.Model):
     low_price = models.DecimalField(max_digits=10, decimal_places=2)
     money = models.DecimalField(max_digits=10, decimal_places=2)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['date', 'code'], name='unique_date_code')
+        ]
+
     def __str__(self):
         return self.name
 

@@ -1,40 +1,20 @@
 import os
 import random
 import requests
-from datetime import datetime, timedelta
-from chinese_calendar import is_holiday
+from datetime import datetime
 
 from django.core.management.base import BaseCommand
 
 from mysite.settings import BASE_DIR
 from mysite.utils import normalize_folder_path
 
+from stock.utils import is_future_date, get_date_list, is_weekend_or_holiday
+
 BASE_DIR = normalize_folder_path(str(BASE_DIR))
 STOCK_EXCEL_PARENT_FOLDER = f'{BASE_DIR}stock/stock-data/'
 
 if not os.path.exists(STOCK_EXCEL_PARENT_FOLDER):
     os.makedirs(STOCK_EXCEL_PARENT_FOLDER)
-
-
-def is_future_date(date_str):
-    return datetime.strptime(date_str, "%Y-%m-%d").date() > datetime.today().date()
-
-
-def get_date_list(start_date_str='',
-                  end_date_str=datetime.today().strftime('%Y-%m-%d')):
-
-    if not start_date_str:
-        return [end_date_str]
-
-    start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
-    end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
-
-    date_list = []
-    while start_date <= end_date:
-        date_list.append(start_date.strftime("%Y-%m-%d"))
-        start_date += timedelta(days=1)
-
-    return date_list
 
 
 class Command(BaseCommand):
@@ -50,6 +30,7 @@ class Command(BaseCommand):
             default='',
             help="Date in YYYY-MM-DD format"
         )
+
         parser.add_argument(
             "--end-date",
             type=str,
@@ -81,20 +62,19 @@ class Command(BaseCommand):
             self.stderr.write(self.style.ERROR(error_msg))
             return
 
-        date_list = get_date_list(start_date_str, end_date_str)
+        stock_excel_parent_folder = normalize_folder_path(kwargs["stock_excel_parent_folder"])
 
+        date_list = get_date_list(start_date_str, end_date_str)
         for date_str in date_list:
 
-            date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
-            if is_holiday(date_obj):
-                error_msg = f"{date_str} is a holiday! "
+            should_pass, error_msg = is_weekend_or_holiday(date_str)
+            if should_pass:
                 self.stderr.write(self.style.ERROR(error_msg))
                 continue
 
             random_value = random.random()
             random_value = f"{random_value:.15f}"
 
-            stock_excel_parent_folder = normalize_folder_path(kwargs["stock_excel_parent_folder"])
             stock_excel_file = f"{stock_excel_parent_folder}stock_data_{date_str}.xlsx"
 
             if os.path.exists(stock_excel_file):
