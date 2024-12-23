@@ -153,6 +153,12 @@ DATABASES = {
         },
     }
 }
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.memcached.PyMemcacheCache",
+        "LOCATION": "127.0.0.1:11211",
+    }
+}
 
 PDF_MAX_SIZE = 5 * 1024 * 1024
 
