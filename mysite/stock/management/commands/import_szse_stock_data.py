@@ -135,3 +135,5 @@ class Command(BaseCommand):
                     self.stderr.write(self.style.ERROR(
                         f"Data mismatch for date={date_str}, code={code}:\n" + "\n".join(discrepancies)
                     ))
+
+        print('Done')

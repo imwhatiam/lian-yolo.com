@@ -96,3 +96,5 @@ class Command(BaseCommand):
                 print(f"Excel file downloaded and saved to {stock_excel_file}")
             else:
                 print(f"Failed to download {date_str} file. Status code: {response.status_code}")
+
+        print('Done')
