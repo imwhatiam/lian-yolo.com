@@ -91,6 +91,9 @@ class Command(BaseCommand):
 
             for _, row in df.iterrows():
 
+                if 'B' in row["证券简称"]:
+                    continue
+
                 date = make_aware(row["交易日期"], timezone=pytz.timezone("Asia/Shanghai"))
                 code = str(row["证券代码"])
                 code = code.zfill(6)

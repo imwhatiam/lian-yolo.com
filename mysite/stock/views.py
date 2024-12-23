@@ -10,7 +10,7 @@ from .models import StockBasicInfo
 @cache_page(60 * 60 * 24)
 def fupan(request):
 
-    last_x_days = request.GET.get('last_x_days', 20)
+    last_x_days = request.GET.get('last_x_days', 11)
 
     big_increase_rate = request.GET.get('big_increase_rate', 6)
     increase_rate_after = request.GET.get('increase_rate_after', 3)
@@ -77,18 +77,28 @@ def fupan(request):
                             if abs(increase_rate) <= increase_rate_after:
                                 result.append({
                                     'date': row["date"].strftime('%Y-%m-%d'),
-                                    'code': row["code"],
                                     'name': row["name"],
                                 })
                                 break  # 找到符合条件的，不再检查下一个范围
 
     result = sorted(result, key=lambda x: x['date'], reverse=True)
 
+    formatted_result = {}
+
+    for item in result:
+        date = item['date']
+        name = item['name']
+        if date not in formatted_result:
+            formatted_result[date] = []
+        formatted_result[date].append(name)
+
+    stock_list = [{'date': date, 'name_list': names} for date, names in formatted_result.items()]
+
     data = {
         'last_x_days': last_x_days,
         'big_increase_rate': big_increase_rate,
         'increase_rate_after': increase_rate_after,
-        'stock_list': result
+        'stock_list': stock_list
     }
 
     return render(request, 'stock/fupan.html', data)

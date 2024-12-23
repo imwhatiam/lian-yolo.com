@@ -11,24 +11,26 @@
         <li>第 3(或4或5) 天的收盘价较大涨幅那天, 涨跌不超过 {{ increase_rate_after }}%</li>
     </ol>
 
-    <table>
+    <table style="border-collapse: collapse; width: 80%;">
         <thead>
-            <tr>
-                <th>大涨那天</th>
-                <th>股票代码</th>
-                <th>股票名称</th>
+            <tr style="background-color: #f2f2f2;">
+                <th style="width: 100px; border: 1px solid #ddd; padding: 8px;">大涨那天</th>
+                <th style="width: 500px; border: 1px solid #ddd; padding: 8px;">股票名称</th>
             </tr>
         </thead>
         <tbody>
             {% for stock in stock_list %}
-                <tr>
-                    <td>{{ stock.date }}</td>
-                    <td>{{ stock.code }}</td>
-                    <td>{{ stock.name }}</td>
+                <tr style="background-color: {% cycle '#ffffff' '#f9f9f9' %};">
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{{ stock.date }}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">
+                        {% for name in stock.name_list %}
+                        {{ name }}、
+                        {% endfor %}
+                    </td>
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="6">没有找到数据</td>
+                    <td colspan="6" style="border: 1px solid #ddd; padding: 8px; text-align: center;">没有找到数据</td>
                 </tr>
             {% endfor %}
         </tbody>
