@@ -4,19 +4,19 @@
 
 {% block content %}
     <h2>豆瓣交友信息汇总</h2>
-    <h4>每 24 小时更新一次</h4>
+    <h4>每 48 小时更新一次</h4>
 
     <!-- 搜索表单 -->
     <form method="get">
         <label for="only_good">只看精华帖：</label>
         <select name="only_good" id="only_good">
             <option value="">所有</option>
-            <option value="true" {% if only_good %}selected{% endif %}>是</option>
+            <option value="" {% if only_good %}selected{% endif %}>是</option>
         </select>
         <label for="is_new">只看新更新：</label>
         <select name="is_new" id="is_new">
             <option value="">所有</option>
-            <option value="true" {% if is_new %}selected{% endif %}>是</option>
+            <option value="" {% if is_new %}selected{% endif %}>是</option>
         </select>
         <label for="title">搜索标题</label>
         <input type="text" name="title" id="title" value="{{ title|default:'' }}">

@@ -1,12 +1,16 @@
 from django.shortcuts import render
 from django.core.paginator import Paginator
+from django.views.decorators.cache import cache_page
+
 from .models import DoubanPost
 
 
+# Cache this view for 24 hours
+@cache_page(60 * 60 * 24)
 def jiaoyou(request):
 
-    only_good = request.GET.get('only_good', 'true') == 'true'
-    is_new = request.GET.get('is_new', 'true') == 'true'
+    only_good = request.GET.get('only_good', 'false') == 'true'
+    is_new = request.GET.get('is_new', 'false') == 'true'
     title = request.GET.get('title', '')
 
     posts = DoubanPost.objects.all()
