@@ -91,7 +91,7 @@ class Command(BaseCommand):
 
             for _, row in df.iterrows():
 
-                if 'B' in row["证券简称"]:
+                if 'B' in row["证券简称"] or 'b' in row["证券简称"]:
                     continue
 
                 date = make_aware(row["交易日期"], timezone=pytz.timezone("Asia/Shanghai"))
