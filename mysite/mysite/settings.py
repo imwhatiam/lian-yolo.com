@@ -132,12 +132,10 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
 # Customer Settings
 TIME_ZONE = 'Asia/Shanghai'
 
-ALLOWED_HOSTS = ['tools.lian-yolo.com', '39.103.49.97', '127.0.0.1']
-# CSRF_TRUSTED_ORIGINS = ['http://39.103.49.97']
+ALLOWED_HOSTS = ['127.0.0.1', 'tools.lian-yolo.com']
 STATIC_ROOT = '/root/lian-yolo.com/mysite/static'
 
 USE_X_FORWARDED_HOST = True
