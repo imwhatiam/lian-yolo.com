@@ -1,3 +1,4 @@
+import logging
 import pandas as pd
 
 from django.shortcuts import render
@@ -5,19 +6,21 @@ from django.views.decorators.cache import cache_page
 
 from .models import StockBasicInfo
 
+logger = logging.getLogger(__name__)
+
 
 # Cache this view for 24 hours
-@cache_page(60 * 60 * 24)
+# @cache_page(60 * 60 * 24)
 def fupan(request):
 
-    last_x_days = request.GET.get('last_x_days', 11)
+    logger.error('in fupan')
+    last_x_days = int(request.GET.get('last_x_days', 11))
 
-    big_increase_rate = request.GET.get('big_increase_rate', 6)
-    increase_rate_after = request.GET.get('increase_rate_after', 3)
+    gwhp_big_increase_rate = int(request.GET.get('gwhp_big_increase_rate', 6))
+    gwhp_increase_rate_after = int(request.GET.get('gwhp_increase_rate_after', 3))
 
-    last_x_days = int(last_x_days)
-    big_increase_rate = int(big_increase_rate)
-    increase_rate_after = int(increase_rate_after)
+    xsbjc_days = int(request.GET.get('xsbjc_days', 3))
+    xsbjc_increase_rate = int(request.GET.get('xsbjc_increase_rate', 3))
 
     # get all code
     # [{'code': '000001'}, {'code': '000002'}, ...]
@@ -25,6 +28,7 @@ def fupan(request):
     codes_list = [code_dict['code'] for code_dict in distinct_codes]
 
     result = []
+    xsbjc_result = []
     for code in codes_list:
 
         # get latest X days data for each stock
@@ -45,46 +49,48 @@ def fupan(request):
             })
 
         df = pd.DataFrame(data_list)
-        # 序号翻转
-        df = df.iloc[::-1].reset_index(drop=True)
-
-        # 计算每日涨幅（相较于前一天的涨幅）
-        df['change_percentage'] = (
+        df = df.iloc[::-1].reset_index(drop=True)  # reverse id
+        df['change_pct'] = (
             df.groupby('code')['close_price'].pct_change() * 100
         ).round(2)
 
+        # find gwhp
         for i, row in df.iterrows():
-
-            # 1. 涨幅大于 x%
-            if row["change_percentage"] > big_increase_rate:
-
-                # 当天收盘价
-                start_close_price = row["close_price"]
-
-                # range(3, 6) 生成从 3 到 5 的数，不包括 6
-                # 之后 3-5 天
+            if row["change_pct"] > gwhp_big_increase_rate:
+                start_price = row["close_price"]
+                # range(3, 6) => [3, 4, 5]
                 for days in list(range(3, 6)):
-
                     if i + days < len(df):
-
-                        # 条件 1：大涨幅之后每天涨跌幅都小于 3
                         future_data = df.loc[i+1:i+days]
-                        if all(future_data["change_percentage"].abs() < increase_rate_after):
-
-                            # 条件 2：大涨幅之后第3(或4或5)天的close_price较大涨那天的涨跌幅不超过 3%
-                            final_close_price = future_data.iloc[-1]["close_price"]
-                            increase_rate = (final_close_price-start_close_price)/start_close_price*100
-                            if abs(increase_rate) <= increase_rate_after:
+                        if all(future_data["change_pct"].abs() < gwhp_increase_rate_after):
+                            final_price = future_data.iloc[-1]["close_price"]
+                            increase_rate = (final_price-start_price)/start_price*100
+                            if abs(increase_rate) <= gwhp_increase_rate_after:
                                 result.append({
                                     'date': row["date"].strftime('%Y-%m-%d'),
                                     'name': row["name"],
                                 })
-                                break  # 找到符合条件的，不再检查下一个范围
+                                break
 
-    result = sorted(result, key=lambda x: x['date'], reverse=True)
+        # # find xsbjc
+        # threshold_min, threshold_max = 0, 3
+        # df['change_pct'] = pd.to_numeric(df['change_pct'], errors='coerce')
+        # df['in_range'] = df['change_pct'].between(threshold_min, threshold_max)
+        # # 标记连续块
+        # df['streak'] = (df['in_range'] != df['in_range'].shift()).cumsum()
+        # # 找到满足条件的块
+        # xsbjc_result = df[df['in_range']].groupby('streak').filter(lambda x: len(x) >= 3)
+        # first_dates = xsbjc_result.groupby('streak').first()['date']
+        # xsbjc_date_list = first_dates.tolist()
+        # if xsbjc_date_list:
+        #     xsbjc_result.append({
+        #         'date': xsbjc_date_list[0].strftime('%Y-%m-%d'),
+        #         'name': code,
+        #     })
 
+    # for gwhp
     formatted_result = {}
-
+    result = sorted(result, key=lambda x: x['date'], reverse=True)
     for item in result:
         date = item['date']
         name = item['name']
@@ -92,13 +98,34 @@ def fupan(request):
             formatted_result[date] = []
         formatted_result[date].append(name)
 
-    stock_list = [{'date': date, 'name_list': names} for date, names in formatted_result.items()]
+    gwhp_stock_list = []
+    for date, names in formatted_result.items():
+        gwhp_stock_list.append({'date': date, 'name_list': names})
+
+    # # for xsbjc
+    # formatted_result = {}
+    # xsbjc_result = sorted(xsbjc_result, key=lambda x: x['date'], reverse=True)
+    # for item in xsbjc_result:
+    #     date = item['date']
+    #     name = item['name']
+    #     if date not in formatted_result:
+    #         formatted_result[date] = []
+    #     formatted_result[date].append(name)
+
+    # xsbjc_stock_list = []
+    # for date, names in formatted_result.items():
+    #     xsbjc_stock_list.append({'date': date, 'name_list': names})
 
     data = {
         'last_x_days': last_x_days,
-        'big_increase_rate': big_increase_rate,
-        'increase_rate_after': increase_rate_after,
-        'stock_list': stock_list
+
+        'gwhp_big_increase_rate': gwhp_big_increase_rate,
+        'gwhp_increase_rate_after': gwhp_increase_rate_after,
+        'gwhp_stock_list': gwhp_stock_list,
+
+        'xsbjc_days': xsbjc_days,
+        'xsbjc_increase_rate': xsbjc_increase_rate,
+        'xsbjc_stock_list': [],
     }
 
     return render(request, 'stock/fupan.html', data)
