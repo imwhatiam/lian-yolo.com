@@ -16,7 +16,7 @@ class StockBasicInfoAdmin(admin.ModelAdmin):
         "money",
     ]
     ordering = ["-date"]  # 按日期倒序排序
-    search_fields = ["name", "code"]  # 支持按名称和代码搜索
+    search_fields = ["date", "name", "code"]  # 支持按名称和代码搜索
     list_filter = ["date"]  # 过滤器
     list_per_page = 20  # 每页显示 20 条记录
 
