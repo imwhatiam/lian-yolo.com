@@ -73,7 +73,7 @@ def fupan(request):
                                 break
 
         # find xsbjc
-        threshold_min, threshold_max = 0, xsbjc_increase_rate
+        threshold_min, threshold_max = 0.1, xsbjc_increase_rate
         df['change_pct'] = pd.to_numeric(df['change_pct'], errors='coerce')
         df['in_range'] = df['change_pct'].between(threshold_min, threshold_max)
         df['streak'] = (df['in_range'] != df['in_range'].shift()).cumsum()
