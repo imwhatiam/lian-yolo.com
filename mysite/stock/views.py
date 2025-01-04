@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 # Cache this view for 24 hours
-# @cache_page(60 * 60 * 24)
+@cache_page(60 * 60 * 24)
 def fupan(request):
 
     logger.error('in fupan')
@@ -19,8 +19,8 @@ def fupan(request):
     gwhp_big_increase_rate = int(request.GET.get('gwhp_big_increase_rate', 6))
     gwhp_increase_rate_after = int(request.GET.get('gwhp_increase_rate_after', 3))
 
-    xsbjc_days = int(request.GET.get('xsbjc_days', 3))
-    xsbjc_increase_rate = int(request.GET.get('xsbjc_increase_rate', 3))
+    xsbjc_days = int(request.GET.get('xsbjc_days', 5))
+    xsbjc_increase_rate = int(request.GET.get('xsbjc_increase_rate', 2))
 
     # get all code
     # [{'code': '000001'}, {'code': '000002'}, ...]
@@ -72,21 +72,20 @@ def fupan(request):
                                 })
                                 break
 
-        # # find xsbjc
-        # threshold_min, threshold_max = 0, 3
-        # df['change_pct'] = pd.to_numeric(df['change_pct'], errors='coerce')
-        # df['in_range'] = df['change_pct'].between(threshold_min, threshold_max)
-        # # 标记连续块
-        # df['streak'] = (df['in_range'] != df['in_range'].shift()).cumsum()
-        # # 找到满足条件的块
-        # xsbjc_result = df[df['in_range']].groupby('streak').filter(lambda x: len(x) >= 3)
-        # first_dates = xsbjc_result.groupby('streak').first()['date']
-        # xsbjc_date_list = first_dates.tolist()
-        # if xsbjc_date_list:
-        #     xsbjc_result.append({
-        #         'date': xsbjc_date_list[0].strftime('%Y-%m-%d'),
-        #         'name': code,
-        #     })
+        # find xsbjc
+        threshold_min, threshold_max = 0, xsbjc_increase_rate
+        df['change_pct'] = pd.to_numeric(df['change_pct'], errors='coerce')
+        df['in_range'] = df['change_pct'].between(threshold_min, threshold_max)
+        df['streak'] = (df['in_range'] != df['in_range'].shift()).cumsum()
+        xsbjc_df = df[df['in_range']].groupby('streak').filter(lambda x: len(x) >= xsbjc_days)
+        if not xsbjc_df.empty:
+            first_recort = xsbjc_df.groupby('streak').first()
+            date = first_recort['date'].tolist()[0]
+            name = first_recort['name'].tolist()[0]
+            xsbjc_result.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'name': name,
+            })
 
     # for gwhp
     formatted_result = {}
@@ -102,19 +101,19 @@ def fupan(request):
     for date, names in formatted_result.items():
         gwhp_stock_list.append({'date': date, 'name_list': names})
 
-    # # for xsbjc
-    # formatted_result = {}
-    # xsbjc_result = sorted(xsbjc_result, key=lambda x: x['date'], reverse=True)
-    # for item in xsbjc_result:
-    #     date = item['date']
-    #     name = item['name']
-    #     if date not in formatted_result:
-    #         formatted_result[date] = []
-    #     formatted_result[date].append(name)
+    # for xsbjc
+    formatted_result = {}
+    xsbjc_result = sorted(xsbjc_result, key=lambda x: x['date'], reverse=True)
+    for item in xsbjc_result:
+        date = item['date']
+        name = item['name']
+        if date not in formatted_result:
+            formatted_result[date] = []
+        formatted_result[date].append(name)
 
-    # xsbjc_stock_list = []
-    # for date, names in formatted_result.items():
-    #     xsbjc_stock_list.append({'date': date, 'name_list': names})
+    xsbjc_stock_list = []
+    for date, names in formatted_result.items():
+        xsbjc_stock_list.append({'date': date, 'name_list': names})
 
     data = {
         'last_x_days': last_x_days,
@@ -125,7 +124,7 @@ def fupan(request):
 
         'xsbjc_days': xsbjc_days,
         'xsbjc_increase_rate': xsbjc_increase_rate,
-        'xsbjc_stock_list': [],
+        'xsbjc_stock_list': xsbjc_stock_list,
     }
 
     return render(request, 'stock/fupan.html', data)
