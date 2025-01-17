@@ -1,6 +1,42 @@
 from django.db import models
 
 
+class Industris(models.Model):
+
+    code = models.CharField(max_length=10, db_index=True, unique=True)
+    name = models.CharField(max_length=10, db_index=True, unique=True)
+    level = models.CharField(max_length=10, db_index=True)
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if self.code:
+            self.code = self.code.zfill(6)
+        super().save(*args, **kwargs)
+
+
+class Stocks(models.Model):
+
+    code = models.CharField(max_length=10, db_index=True, unique=True)
+    name = models.CharField(max_length=10, db_index=True, unique=True)
+    sw_l2 = models.CharField(max_length=10, db_index=True)
+    sw_l3 = models.CharField(max_length=10, db_index=True)
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        # 自动补齐为 6 位
+        if self.code:
+            self.code = self.code.zfill(6)
+        if self.sw_l2:
+            self.sw_l2 = self.sw_l2.zfill(6)
+        if self.sw_l3:
+            self.sw_l3 = self.sw_l3.zfill(6)
+        super().save(*args, **kwargs)
+
+
 class StockBasicInfo(models.Model):
 
     date = models.DateField(db_index=True)
