@@ -4,7 +4,7 @@ from django.db import models
 class Industris(models.Model):
 
     code = models.CharField(max_length=10, db_index=True, unique=True)
-    name = models.CharField(max_length=10, db_index=True, unique=True)
+    name = models.CharField(max_length=10, db_index=True)
     level = models.CharField(max_length=10, db_index=True)
 
     def __str__(self):
