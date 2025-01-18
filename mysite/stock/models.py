@@ -37,7 +37,7 @@ class Stocks(models.Model):
         super().save(*args, **kwargs)
 
 
-class StockBasicInfo(models.Model):
+class StockTradeInfo(models.Model):
 
     date = models.DateField(db_index=True)
     code = models.CharField(max_length=10, db_index=True)

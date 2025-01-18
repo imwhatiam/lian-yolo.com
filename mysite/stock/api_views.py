@@ -2,6 +2,7 @@ import logging
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAdminUser
 
 from .models import Stocks, Industris
 
@@ -12,6 +13,7 @@ class StockIndustryInfoAPIView(APIView):
     """
     API View to handle POST requests for adding stock data.
     """
+    permission_classes = [IsAdminUser]
 
     def create_or_update_record(self, model, unique_field, data_dict, defaults):
         """
@@ -49,6 +51,7 @@ class StockIndustryInfoAPIView(APIView):
                 )
 
     def post(self, request, *args, **kwargs):
+
         json_data = request.data
 
         # Process stock data
@@ -75,3 +78,9 @@ class StockIndustryInfoAPIView(APIView):
 
         return Response({"message": "Record created successfully."},
                         status=status.HTTP_201_CREATED)
+
+
+class BigRiseVolumeAPIView(APIView):
+
+    def get(self, request, *args, **kwargs):
+        return Response({"message": "BigRiseVolumeAPIView"}, status=status.HTTP_200_OK)

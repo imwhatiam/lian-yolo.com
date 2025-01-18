@@ -4,7 +4,7 @@ import pandas as pd
 from django.shortcuts import render
 from django.views.decorators.cache import cache_page
 
-from .models import StockBasicInfo
+from .models import StockTradeInfo
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ def fupan(request):
 
     # get all code
     # [{'code': '000001'}, {'code': '000002'}, ...]
-    distinct_codes = StockBasicInfo.objects.values('code').distinct()
+    distinct_codes = StockTradeInfo.objects.values('code').distinct()
     codes_list = [code_dict['code'] for code_dict in distinct_codes]
 
     result = []
@@ -32,20 +32,20 @@ def fupan(request):
     for code in codes_list:
 
         # get latest X days data for each stock
-        basic_infos = StockBasicInfo.objects.filter(code=code)
-        basic_infos = basic_infos.order_by('-date')[:last_x_days]
+        trade_infos = StockTradeInfo.objects.filter(code=code)
+        trade_infos = trade_infos.order_by('-date')[:last_x_days]
 
         data_list = []
-        for basic_info in basic_infos:
+        for trade_info in trade_infos:
             data_list.append({
-                'date': basic_info.date,
-                'code': basic_info.code,
-                'name': basic_info.name,
-                # 'open_price': basic_info.open_price,
-                'close_price': basic_info.close_price,
-                # 'high_price': basic_info.high_price,
-                # 'low_price': basic_info.low_price,
-                # 'money': basic_info.money
+                'date': trade_info.date,
+                'code': trade_info.code,
+                'name': trade_info.name,
+                # 'open_price': trade_info.open_price,
+                'close_price': trade_info.close_price,
+                # 'high_price': trade_info.high_price,
+                # 'low_price': trade_info.low_price,
+                # 'money': trade_info.money
             })
 
         df = pd.DataFrame(data_list)

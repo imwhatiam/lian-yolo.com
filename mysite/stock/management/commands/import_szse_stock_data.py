@@ -10,7 +10,7 @@ from django.core.management.base import BaseCommand
 from mysite.settings import BASE_DIR
 from mysite.utils import normalize_folder_path
 
-from stock.models import StockBasicInfo
+from stock.models import StockTradeInfo
 from stock.utils import is_future_date, get_date_list, is_weekend_or_holiday
 
 BASE_DIR = normalize_folder_path(str(BASE_DIR))
@@ -70,7 +70,7 @@ class Command(BaseCommand):
             should_pass, error_msg = is_weekend_or_holiday(date_str)
             if should_pass:
                 self.stderr.write(self.style.ERROR(error_msg))
-                record_count = StockBasicInfo.objects.filter(date=date_str).count()
+                record_count = StockTradeInfo.objects.filter(date=date_str).count()
                 self.stderr.write(self.style.ERROR(f"Record count: {record_count}"))
                 continue
 
@@ -98,10 +98,10 @@ class Command(BaseCommand):
                 code = str(row["证券代码"])
                 code = code.zfill(6)
 
-                stock = StockBasicInfo.objects.filter(date=date, code=code).first()
+                trade_info = StockTradeInfo.objects.filter(date=date, code=code).first()
 
-                if not stock:
-                    StockBasicInfo.objects.create(
+                if not trade_info:
+                    StockTradeInfo.objects.create(
                         date=date,
                         code=code,
                         name=row["证券简称"],
@@ -127,7 +127,7 @@ class Command(BaseCommand):
                 }
 
                 for field, value in fields_to_check.items():
-                    db_value = getattr(stock, field)
+                    db_value = getattr(trade_info, field)
                     if isinstance(db_value, Decimal):
                         # convert Decimal to float
                         db_value = float(db_value)

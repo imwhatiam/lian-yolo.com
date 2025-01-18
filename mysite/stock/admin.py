@@ -1,9 +1,9 @@
 from django.contrib import admin
-from .models import StockBasicInfo, Stocks, Industris
+from .models import StockTradeInfo, Stocks, Industris
 
 
-@admin.register(StockBasicInfo)
-class StockBasicInfoAdmin(admin.ModelAdmin):
+@admin.register(StockTradeInfo)
+class StockTradeInfoAdmin(admin.ModelAdmin):
 
     list_display = [
         "formatted_date",
