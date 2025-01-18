@@ -1,10 +1,12 @@
 import logging
+
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 
 from .models import Stocks, Industris
+from .utils import get_stock_info_dict, get_trade_info_pd
 
 logger = logging.getLogger('stock')
 
@@ -83,4 +85,24 @@ class StockIndustryInfoAPIView(APIView):
 class BigRiseVolumeAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
-        return Response({"message": "BigRiseVolumeAPIView"}, status=status.HTTP_200_OK)
+
+        last_x_days = int(request.GET.get('last_x_days', 11))
+
+        stock_info_dict = get_stock_info_dict()
+        stock_code_list = list(stock_info_dict.keys())
+
+        df = get_trade_info_pd(stock_code_list, last_x_days)
+
+        # 成交超 6亿，涨幅超 6%
+        df["money"] *= 10000
+        result = df[(df["money"] >= 6e8) & (df["change_pct"] > 6)]
+        result = result.sort_values(by="date", ascending=False)
+
+        result_dict = {}
+        for _, row in result.iterrows():
+            date = str(row["date"])
+            if date not in result_dict:
+                result_dict[date] = []
+            result_dict[date].append([row["name"], row["money"], row["change_pct"]])
+
+        return Response({"data": result_dict}, status=status.HTTP_200_OK)
