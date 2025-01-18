@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}选股{% endblock %}
+
+{% block content %}
+<style>
+    /* 设置容器样式 */
+    .selection-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: stretch; /* 子元素高度相同 */
+        gap: 20px; /* 子元素间距 */
+    }
+
+    .selection-box {
+        height: 550px;
+        flex: 1; /* 平均分配宽度 */
+        border: 1px solid #ddd;
+        padding: 20px;
+        background-color: #fff;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        overflow-y: auto; /* 启用垂直滚动条 */
+        max-height: 600px; /* 设置最大高度 */
+    }
+
+    .selection-box table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .selection-box table th,
+    .selection-box table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: center;
+    }
+
+    .selection-box table thead th {
+        background-color: #f2f2f2;
+    }
+</style>
+
+<span>交易日 17:15 更新</span>
+<div class="selection-container">
+    <div id='gwhp' class="selection-box">
+        <h2><a href="https://app.yinxiang.com/fx/b66a32b0-111c-4018-a0a8-88330d8b9ad2" target="_blank">大涨后高位横盘</a></h2>
+        <span>最近 {{ last_x_days }} 天内，有一天大涨 {{ gwhp_big_increase_rate }}% 且之后 3-5 天每天涨跌不超过 {{ gwhp_increase_rate_after }}%</span>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 100px;">大涨那天</th>
+                    <th>股票名称</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock in gwhp_stock_list %}
+                    <tr style="background-color: {% cycle '#ffffff' '#f9f9f9' %};">
+                        <td>{{ stock.date }}</td>
+                        <td>
+                            {% for name in stock.name_list %}
+                            {{ name }}、
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="2">没有找到数据</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id='xsbyx' class="selection-box">
+        <h2><a href="https://app.yinxiang.com/fx/7778a268-20c8-4276-afc7-5fdea8891673" target="_blank">小碎步建仓量</a></h2>
+        <span>最近 {{ last_x_days }} 天内，至少连续 {{ xsbjc_days }} 天每天都涨但涨幅不超过 {{ xsbjc_increase_rate }}%</span>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 100px;">起涨日期</th>
+                    <th>股票名称</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock in xsbjc_stock_list %}
+                    <tr style="background-color: {% cycle '#ffffff' '#f9f9f9' %};">
+                        <td>{{ stock.date }}</td>
+                        <td>
+                            {% for name in stock.name_list %}
+                            {{ name }}、
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="2">没有找到数据</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+{% endblock %}

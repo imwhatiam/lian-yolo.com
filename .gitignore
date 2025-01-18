@@ -1,3 +1,10 @@
+mysite/static/
+mysite/stock/stock-data/
+*.log
+*.swp
+*.DS_Store
+# requirements.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
