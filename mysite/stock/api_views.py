@@ -49,14 +49,17 @@ class StockIndustryInfoAPIView(APIView):
                 )
 
     def post(self, request, *args, **kwargs):
-
         json_data = request.data
 
         # Process stock data
         stock_data_list = json_data.get('stocks', [])
         for stock_data in stock_data_list:
-            code, name, sw_l2, sw_l3 = \
-                    stock_data[0], stock_data[1] or '', stock_data[2] or '', stock_data[3] or ''
+            code, name, sw_l2, sw_l3 = (
+                stock_data[0],
+                stock_data[1] or '',
+                stock_data[2] or '',
+                stock_data[3] or ''
+            )
             if code and name:
                 self.create_or_update_record(
                     model=Stocks,
