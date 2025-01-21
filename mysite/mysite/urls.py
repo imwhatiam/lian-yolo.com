@@ -17,10 +17,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
-from .views import index
+from .views import index, react_home
 
 urlpatterns = [
     path('', index),
+    path('react/', react_home),
     path('admin/', admin.site.urls),
     path('pdf-to-img/', include('pdf_to_img.urls')),
     path('douban/', include('douban.urls')),
