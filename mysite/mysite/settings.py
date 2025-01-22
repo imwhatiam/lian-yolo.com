@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'pdf_to_img',
     'douban',
     'stock',
+    'react_naive_book',
 ]
 
 MIDDLEWARE = [
