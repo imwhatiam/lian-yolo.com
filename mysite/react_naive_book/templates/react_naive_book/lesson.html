@@ -3,7 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <title>Lesson {{ lesson_number }}</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -47,6 +46,8 @@
       </div>
       <h1>要点</h1>
       <div id="markdown"></div>
+      {% load static %}
+      <script src="{% static 'react_naive_book/js/marked.min.js' %}"></script>
       <script>
          const markdownContent = "{{ markdown_content|safe|escapejs }}";
          const parsedContent = marked.parse(markdownContent);
