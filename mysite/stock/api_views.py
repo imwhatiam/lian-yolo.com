@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAdminUser
 from .models import Stocks, Industris
 from .utils import get_stock_info_dict, get_trade_info_pd
 
-logger = logging.getLogger('stock')
+logger = logging.getLogger(__name__)
 
 
 class StockIndustryInfoAPIView(APIView):
@@ -34,7 +34,8 @@ class StockIndustryInfoAPIView(APIView):
         if not created:
             db_data = {field: getattr(obj, field) for field in data_dict.keys()}
             if data_dict != db_data:
-                logger.warning(f"{model.__name__} info mismatch: {data_dict} != {db_data}")
+                msg = f"{model.__name__} info mismatch: {data_dict} != {db_data}"
+                logger.warning(msg)
 
     def handle_industries(self, industries_dict, level):
         """

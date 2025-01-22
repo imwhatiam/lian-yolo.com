@@ -167,41 +167,34 @@ CACHES = {
 }
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '%(asctime)s [%(levelname)s] %(name)s:%(lineno)d %(message)s',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "require_debug_false": {
+            "()": "django.utils.log.RequireDebugFalse",
+        },
+        "require_debug_true": {
+            "()": "django.utils.log.RequireDebugTrue",
         },
     },
-    'handlers': {
-        'console': {
-            'level': 'INFO',
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+    'formatters': {
+        "verbose": {
+            "format": "{asctime} {levelname} {name}:{lineno} {message}",
+            "style": "{",
         },
+    },
+    "handlers": {
         'file': {
-            'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': '/tmp/mysite.log',
             'formatter': 'verbose',
         },
     },
-    'loggers': {
-        'django': {
+    "loggers": {
+        "": {
             'handlers': ['file'],
-            'level': 'INFO',
             'propagate': True,
         },
-        'stock': {
-            'handlers': ['file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-    },
-    'root': {
-        'handlers': ['console', 'file'],
-        'level': 'DEBUG',
     },
 }
 

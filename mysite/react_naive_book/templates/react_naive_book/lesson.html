@@ -37,13 +37,15 @@
   <body>
     <div id="root">
       <p><a href="https://github.com/huzidaha/react-naive-book/blob/remote-version/_posts/2017-02-12-lesson1.md" target="_blank">React.js 小书</a></p>
+      <h1>效果</h1>
       <div id="runtime">
         {{ code_content|safe }}
       </div>
+      <h1>源码</h1>
       <div id="code">
         <pre><code>{{ code_content|escape }}</code></pre>
       </div>
-      <h1>代码要点</h1>
+      <h1>要点</h1>
       <div id="markdown"></div>
       <script>
          const markdownContent = "{{ markdown_content|safe|escapejs }}";
