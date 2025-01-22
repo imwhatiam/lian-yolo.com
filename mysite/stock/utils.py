@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 from django.db.models import QuerySet
 
-from .models import Stocks, Industris, StockTradeInfo
+from .models import Stock, Industry, StockTradeInfo
 
 
 def is_future_date(date_str):
@@ -53,7 +53,7 @@ def get_stock_info_dict() -> dict:
     :return: 字典，格式为 {code: {'name': ..., 'sw_l2': ..., 'sw_l3': ...}}
     """
 
-    stocks: QuerySet = Stocks.objects.all()
+    stocks: QuerySet = Stock.objects.all()
 
     stock_info_dict = {
         stock.code: {
@@ -75,7 +75,7 @@ def get_industry_info_dict() -> dict:
     :return: 字典，格式为 {code: {'name': ..., 'level': ...}}
     """
 
-    industries: QuerySet = Industris.objects.all()
+    industries: QuerySet = Industry.objects.all()
 
     industry_info_dict = {
         industry.code: {

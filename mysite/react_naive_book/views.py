@@ -1,7 +1,7 @@
 import logging
 from django.shortcuts import render
 
-from .models import Lessons
+from .models import Lesson
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ def lesson(request, lesson_number):
     source_code = ""
     knowledge = ""
     try:
-        lesson = Lessons.objects.filter(lesson_number=lesson_number).first()
+        lesson = Lesson.objects.filter(lesson_number=lesson_number).first()
         if lesson:
             source_code = lesson.source_code
             knowledge = lesson.knowledge

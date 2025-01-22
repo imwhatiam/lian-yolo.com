@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class Industris(models.Model):
+class Industry(models.Model):
 
     code = models.CharField(max_length=10, db_index=True, unique=True)
     name = models.CharField(max_length=100, db_index=True)
@@ -16,7 +16,7 @@ class Industris(models.Model):
         super().save(*args, **kwargs)
 
 
-class Stocks(models.Model):
+class Stock(models.Model):
 
     code = models.CharField(max_length=10, db_index=True, unique=True)
     name = models.CharField(max_length=100, db_index=True, unique=True)

@@ -1,4 +1,4 @@
 from django.contrib import admin
-from .models import Lessons
+from .models import Lesson
 
-admin.site.register(Lessons)
+admin.site.register(Lesson)

@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class Lessons(models.Model):
+class Lesson(models.Model):
 
     lesson_number = models.IntegerField(db_index=True, unique=True)
     source_code = models.TextField()
