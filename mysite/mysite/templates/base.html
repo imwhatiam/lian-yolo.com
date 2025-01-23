@@ -37,10 +37,10 @@
         {% endif %}
         {% endcomment %}
         {% if request.path == '/' %}
-        <p><a href="/admin/">Admin</a></p>
+        <p><a href="/admin/" target="_blank">Admin</a></p>
         {% endif %}
         {% if request.path != '/' %}
-        <p><a href="/">回到首页</a></p>
+        <p><a href="/" target="_blank">回到首页</a></p>
         {% endif %}
         {% block content %}
         {% endblock %}
