@@ -41,6 +41,7 @@ INSTALLED_APPS = [
 
     'rest_framework',
 
+    'mysite',
     'pdf_to_img',
     'douban',
     'stock',
