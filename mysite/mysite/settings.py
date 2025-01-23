@@ -16,9 +16,6 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -59,12 +56,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
-REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-    ],
-}
 
 ROOT_URLCONF = 'mysite.urls'
 
@@ -139,33 +130,6 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Customer Settings
-TIME_ZONE = 'Asia/Shanghai'
-
-ALLOWED_HOSTS = ['127.0.0.1', 'tools.lian-yolo.com']
-STATIC_ROOT = '/root/lian-yolo.com/mysite/static'
-
-USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'lian',
-        'OPTIONS': {
-            'read_default_file': '/etc/mysql/mysql.conf.d/mysqld.cnf',
-            'charset': 'utf8mb4',
-        },
-    }
-}
-
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.memcached.PyMemcacheCache",
-        "LOCATION": "127.0.0.1:11211",
-    }
-}
-
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -174,6 +138,7 @@ LOGGING = {
             "()": "django.utils.log.RequireDebugFalse",
         },
         "require_debug_true": {
+            "()": "django.utils.log.RequireDebugTrue",
             "()": "django.utils.log.RequireDebugTrue",
         },
     },
@@ -197,10 +162,6 @@ LOGGING = {
         },
     },
 }
-
-PDF_MAX_SIZE = 5 * 1024 * 1024
-
-DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000000
 
 # for dev env
 local_settings_path = os.path.join(BASE_DIR, '../local_settings.py')
