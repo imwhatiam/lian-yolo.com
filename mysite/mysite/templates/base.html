@@ -36,6 +36,9 @@
         </div>
         {% endif %}
         {% endcomment %}
+        {% if request.path == '/' %}
+        <p><a href="/admin/">Admin</a></p>
+        {% endif %}
         {% if request.path != '/' %}
         <p><a href="/">回到首页</a></p>
         {% endif %}
