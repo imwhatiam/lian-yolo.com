@@ -11,17 +11,64 @@
     <script src="{% static 'mysite/js/babel.min.js' %}"></script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="wrapper"></div>
     <script type="text/babel">
-
-      function MyApp() {
-        return <h1>Hello, world!</h1>;
+      class Title extends React.Component {
+        handleClickOnTitle () {
+          alert('Click on title.')
+        }
+        render () {
+          return (
+            <h1 onClick={this.handleClickOnTitle}>React 小书</h1>
+          )
+        }
       }
 
-      const container = document.getElementById('root');
-      const root = ReactDOM.createRoot(container);
-      root.render(<MyApp />);
+      class Header extends React.Component {
+        render () {
+          return (
+          <div>
+            <Title />
+            <h2>This is Header</h2>
+          </div>
+          )
+        }
+      }
 
+      class Main extends React.Component {
+        render () {
+          return (
+          <div>
+            <h2>This is main content</h2>
+          </div>
+          )
+        }
+      }
+
+      class Footer extends React.Component {
+        render () {
+          return (
+          <div>
+            <h2>This is footer</h2>
+          </div>
+          )
+        }
+      }
+
+      class Index extends React.Component {
+        render () {
+          return (
+            <div>
+              <Header />
+              <Main />
+              <Footer />
+            </div>
+          )
+        }
+      }
+      const container = document.getElementById('wrapper');
+      const root = ReactDOM.createRoot(container);
+      root.render(<Index />)
     </script>
     <!--
       Note: this page is a great way to try React but it's not suitable for production.
