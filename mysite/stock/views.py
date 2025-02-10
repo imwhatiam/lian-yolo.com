@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 @cache_page(60 * 60 * 24)
 def fupan(request):
 
-    logger.error('in fupan')
     last_x_days = int(request.GET.get('last_x_days', 11))
 
     gwhp_big_increase_rate = int(request.GET.get('gwhp_big_increase_rate', 6))

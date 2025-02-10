@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Lesson {{ lesson_number }}</title>
+    {% load static %}
+    <script src="{% static 'react_naive_book/js/marked.min.js' %}"></script>
+    <script src="{% static 'react_naive_book/js/react.development.js' %}"></script>
+    <script src="{% static 'react_naive_book/js/react-dom.development.js' %}"></script>
+    <script src="{% static 'react_naive_book/js/babel.min.js' %}"></script>
+    <script src="{% static 'react_naive_book/js/prop-types.min.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'react_naive_book/css/react-naive-book.css' %}">
+  </head>
+  <body>
+    <div id="root">
+      <div id="side-panel">
+        <p><a href="/" target="_blank">回到首页</a></p>
+        <p><a href="https://github.com/huzidaha/react-naive-book/blob/remote-version/_posts/2017-02-12-lesson1.md" target="_blank">React.js 小书</a></p>
+        {% for lesson_number in lesson_numbers %}
+          <p><a href="{% url 'react-naive-book-lesson' lesson_number %}" target="_blank">学习笔记 {{ lesson_number }}</a></p>
+        {% endfor %}
+      </div>
+      <div id="content">
+        <h1>效果</h1>
+        <div id="runtime">
+          {{ code_content|safe }}
+        </div>
+        <h1>源码</h1>
+        <div id="code">
+          <pre><code>{{ code_content|escape }}</code></pre>
+        </div>
+        <h1>要点</h1>
+        <div id="markdown"></div>
+        <script>
+          const markdownContent = "{{ markdown_content|safe|escapejs }}";
+          const parsedContent = marked.parse(markdownContent);
+          document.getElementById('markdown').innerHTML = parsedContent;
+        </script>
+      </div>
+    </div>
+  </body>
+</html>

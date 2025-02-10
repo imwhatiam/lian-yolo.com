@@ -4,6 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Yolo{% endblock %}</title>
+    <style>
+      img {
+        width:250px;
+        height:250px;
+        object-fit:contain;
+      }
+      footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        padding: 10px;
+      }
+    </style>
 </head>
 <body>
     <header>
@@ -11,14 +26,27 @@
     </header>
 
     <main>
+        {% comment %}
+        {% if request.path == '/' %}
+        {% load static %}
+        <div>
+            <img src="{% static 'mysite/img/yolo-biancheng.png' %}">
+            <img src="{% static 'mysite/img/yolo-chaogu.png' %}">
+            <img src="{% static 'mysite/img/yolo-huwai.png' %}">
+        </div>
+        {% endif %}
+        {% endcomment %}
+        {% if request.path == '/' %}
+        <p><a href="/admin/" target="_blank">Admin</a></p>
+        {% endif %}
         {% if request.path != '/' %}
-        <p><a href="/">回到首页</a></p>
+        <p><a href="/" target="_blank">回到首页</a></p>
         {% endif %}
         {% block content %}
         {% endblock %}
     </main>
 
-    <footer  style="position: fixed; bottom: 0; left: 0; width: 100%; text-align: center; padding: 10px;">
+    <footer>
         <p><a href="http://beian.miit.gov.cn/" target="_blank">京ICP备2024096986号-1</a></p>
     </footer>
 

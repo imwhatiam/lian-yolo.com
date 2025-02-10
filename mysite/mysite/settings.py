@@ -16,9 +16,6 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -43,27 +40,25 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework',
+    'corsheaders',
 
+    'mysite',
     'pdf_to_img',
     'douban',
     'stock',
+    'react_naive_book',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
-REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-    ],
-}
 
 ROOT_URLCONF = 'mysite.urls'
 
@@ -132,81 +127,49 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Customer Settings
-TIME_ZONE = 'Asia/Shanghai'
-
-ALLOWED_HOSTS = ['127.0.0.1', 'tools.lian-yolo.com']
-STATIC_ROOT = '/root/lian-yolo.com/mysite/static'
-
-USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'lian',
-        'OPTIONS': {
-            'read_default_file': '/etc/mysql/mysql.conf.d/mysqld.cnf',
-            'charset': 'utf8mb4',
-        },
-    }
-}
-
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.memcached.PyMemcacheCache",
-        "LOCATION": "127.0.0.1:11211",
-    }
-}
-
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '%(asctime)s [%(levelname)s] %(name)s:%(lineno)d %(message)s',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "require_debug_false": {
+            "()": "django.utils.log.RequireDebugFalse",
+        },
+        "require_debug_true": {
+            "()": "django.utils.log.RequireDebugTrue",
         },
     },
-    'handlers': {
-        'console': {
-            'level': 'INFO',
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+    'formatters': {
+        "verbose": {
+            "format": "{asctime} {levelname} {name}:{lineno} {message}",
+            "style": "{",
         },
+    },
+    "handlers": {
         'file': {
-            'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': '/tmp/mysite.log',
             'formatter': 'verbose',
         },
     },
-    'loggers': {
-        'django': {
+    "loggers": {
+        "": {
             'handlers': ['file'],
-            'level': 'INFO',
             'propagate': True,
         },
-        'stock': {
-            'handlers': ['file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-    },
-    'root': {
-        'handlers': ['console', 'file'],
-        'level': 'DEBUG',
     },
 }
 
-PDF_MAX_SIZE = 5 * 1024 * 1024
-
-DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000000
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
 
 # for dev env
 local_settings_path = os.path.join(BASE_DIR, '../local_settings.py')
