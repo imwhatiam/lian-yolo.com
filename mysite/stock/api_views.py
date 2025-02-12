@@ -113,5 +113,6 @@ class BigRiseVolumeAPIView(APIView):
                 result_dict[date] = []
             result_dict[date].append([row["name"], row["money"], row["change_pct"]])
 
+        result_dict = dict(sorted(result_dict.items(), reverse=True))
         cache.set(cache_key, result_dict, timeout=60 * 60 * 24)
         return Response({"data": result_dict}, status=status.HTTP_200_OK)
