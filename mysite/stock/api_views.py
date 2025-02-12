@@ -89,7 +89,7 @@ class BigRiseVolumeAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
 
-        last_x_days = int(request.GET.get('last_x_days', 11))
+        last_x_days = int(request.GET.get('last_x_days', 5))
 
         cache_key = f"big_rise_volume_{last_x_days}"
         cached_data = cache.get(cache_key)
@@ -101,10 +101,10 @@ class BigRiseVolumeAPIView(APIView):
 
         df = get_trade_info_pd(stock_code_list, last_x_days)
 
-        # 成交超 6亿，涨幅超 6%
+        # 成交超8亿，涨幅超8%
         df["money"] *= 10000
-        result = df[(df["money"] >= 6e8) & (df["change_pct"] > 6)]
-        result = result.sort_values(by="date", ascending=False)
+        result = df[(df["money"] >= 8e8) & (df["change_pct"] > 8)]
+        result = result.sort_values(by="change_pct", ascending=False)
 
         result_dict = {}
         for _, row in result.iterrows():
