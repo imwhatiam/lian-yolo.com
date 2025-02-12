@@ -1,5 +1,7 @@
 import logging
 
+from django.core.cache import cache
+
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -89,6 +91,11 @@ class BigRiseVolumeAPIView(APIView):
 
         last_x_days = int(request.GET.get('last_x_days', 11))
 
+        cache_key = f"big_rise_volume_{last_x_days}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response({"data": cached_data}, status=status.HTTP_200_OK)
+
         stock_info_dict = get_stock_info_dict()
         stock_code_list = list(stock_info_dict.keys())
 
@@ -106,4 +113,5 @@ class BigRiseVolumeAPIView(APIView):
                 result_dict[date] = []
             result_dict[date].append([row["name"], row["money"], row["change_pct"]])
 
+        cache.set(cache_key, result_dict, timeout=60 * 60 * 24)
         return Response({"data": result_dict}, status=status.HTTP_200_OK)
