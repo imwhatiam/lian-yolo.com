@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 from django.db.models import QuerySet
 
-from .models import Stock, Industry, StockTradeInfo
+from .models import Stock, Industry, StockTradeInfo, IndustryStock
 
 
 def is_future_date(date_str):
@@ -90,6 +90,8 @@ def get_industry_info_dict() -> dict:
 
 def get_trade_info_pd(stock_code_list, last_x_days):
 
+    stock_code_industry_dict = IndustryStock.objects.get_stock_code_industry_dict()
+
     data_list = []
     for code in stock_code_list:
         trade_infos = StockTradeInfo.objects.filter(code=code)
@@ -100,6 +102,7 @@ def get_trade_info_pd(stock_code_list, last_x_days):
                 'date': trade_info.date,
                 'code': trade_info.code,
                 'name': trade_info.name,
+                'industry': stock_code_industry_dict.get(trade_info.code, ''),
                 'close_price': trade_info.close_price,
                 'money': trade_info.money
             })

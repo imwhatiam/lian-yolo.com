@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 
-from .models import Stock, Industry
+from .models import Stock, Industry, IndustryStock
 from .utils import get_stock_info_dict, get_trade_info_pd
 
 logger = logging.getLogger(__name__)
@@ -92,12 +92,11 @@ class BigRiseVolumeAPIView(APIView):
         last_x_days = int(request.GET.get('last_x_days', 5))
 
         cache_key = f"big_rise_volume_{last_x_days}"
-        cached_data = cache.get(cache_key)
-        if cached_data:
-            return Response({"data": cached_data}, status=status.HTTP_200_OK)
+        # cached_data = cache.get(cache_key)
+        # if cached_data:
+        #     return Response({"data": cached_data}, status=status.HTTP_200_OK)
 
-        stock_info_dict = get_stock_info_dict()
-        stock_code_list = list(stock_info_dict.keys())
+        stock_code_list = IndustryStock.objects.get_stock_code_list()
 
         df = get_trade_info_pd(stock_code_list, last_x_days)
 
@@ -108,11 +107,26 @@ class BigRiseVolumeAPIView(APIView):
 
         result_dict = {}
         for _, row in result.iterrows():
-            date = str(row["date"])
+            date = str(row['date'])
+            industry = row['industry']
+            name = row['name']
+            change_pct = row['change_pct']
+            money = row['money']
+            
+            # 如果字典中还没有该日期，则初始化为一个空字典
             if date not in result_dict:
-                result_dict[date] = []
-            result_dict[date].append([row["name"], row["money"], row["change_pct"]])
+                result_dict[date] = {}
+            
+            # 如果该日期下还没有该行业，则初始化为一个空列表
+            if industry not in result_dict[date]:
+                result_dict[date][industry] = []
+            
+            # 将需要的数据以列表形式添加到对应的行业列表中
+            result_dict[date][industry].append([name, change_pct, money])
 
-        result_dict = dict(sorted(result_dict.items(), reverse=True))
-        cache.set(cache_key, result_dict, timeout=60 * 60 * 24)
+        for date in result_dict:
+            for industry in result_dict[date]:
+                result_dict[date][industry].sort(key=lambda x: x[1], reverse=True)
+
+        # cache.set(cache_key, result_dict, timeout=60 * 60 * 24)
         return Response({"data": result_dict}, status=status.HTTP_200_OK)

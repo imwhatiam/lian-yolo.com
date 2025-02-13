@@ -1,11 +1,32 @@
 from django.db import models
 
+class IndustryStockManager(models.Manager):
+
+    def get_industry_name_list(self):
+        return self.values('industry').distinct()
+
+    def get_stock_code_industry_dict(self):
+        values = self.values_list('code', 'industry')
+        return {code: industry for code, industry in values}
+
+    def get_stock_code_name_dict(self, industry=''):
+        if not industry:
+            return self.values('code', 'name')
+        return self.filter(industry=industry).values('code', 'name')
+
+    def get_stock_code_list(self, industry=''):
+        if not industry:
+            return self.values_list('code', flat=True)
+        return self.filter(industry=industry).values_list('code', flat=True)
+
 
 class IndustryStock(models.Model):
 
     code = models.CharField(max_length=10, db_index=True, unique=True)
     name = models.CharField(max_length=100, db_index=True)
     industry = models.CharField(max_length=100, db_index=True)
+
+    objects = IndustryStockManager()
 
     def __str__(self):
         return self.name
