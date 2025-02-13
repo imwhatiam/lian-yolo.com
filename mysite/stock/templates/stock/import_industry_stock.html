@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Import Industry Stock{% endblock %}
+
+{% block content %}
+    <h2>Upload a csv File</h2>
+    <form action="/stock/import-industry-stock/" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+        <input type="file" name="file" accept="application/csv" required>
+        <p><button type="submit">Upload</button></p>
+    </form>
+    {% if success %}
+    <p> Successfully uploaded </p>
+    {% endif %}
+    {% for data in data_list %}
+        <p>{{ data }}</p>
+    {% endfor %}
+{% endblock %}
+
+{% block script %}
+<script>
+    // JavaScript logic for file validation or user interaction
+    document.querySelector('input[type="file"]').addEventListener('change', function (event) {
+        const file = event.target.files[0];
+        console.log(file.type);
+        if (file && file.type !== 'text/csv') {
+            alert('Please upload a valid csv file.');
+            event.target.value = ''; // Reset the file input
+        }
+    });
+</script>
+{% endblock %}
+

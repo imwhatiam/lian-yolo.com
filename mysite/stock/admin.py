@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import StockTradeInfo, Stock, Industry
+from .models import StockTradeInfo, Stock, Industry, IndustryStock
 
 
 @admin.register(StockTradeInfo)
@@ -48,3 +48,14 @@ class IndustryAdmin(admin.ModelAdmin):
         "level",
     ]
     search_fields = ["code", "name", "level"]
+
+
+@admin.register(IndustryStock)
+class IndustryStockAdmin(admin.ModelAdmin):
+
+    list_display = [
+        "code",
+        "name",
+        "industry",
+    ]
+    search_fields = ["code", "name", "industry"]

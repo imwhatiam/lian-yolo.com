@@ -1,6 +1,21 @@
 from django.db import models
 
 
+class IndustryStock(models.Model):
+
+    code = models.CharField(max_length=10, db_index=True, unique=True)
+    name = models.CharField(max_length=100, db_index=True)
+    industry = models.CharField(max_length=100, db_index=True)
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if self.code:
+            self.code = self.code.zfill(6)
+        super().save(*args, **kwargs)
+
+
 class Industry(models.Model):
 
     code = models.CharField(max_length=10, db_index=True, unique=True)

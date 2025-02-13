@@ -11,4 +11,7 @@ urlpatterns = [
          name='big-rise-volume-api-view'),
 
     path('fupan/', views.fupan, name='stock_fupan'),
+    path('import-industry-stock/',
+         views.import_industry_stock,
+         name='stock_import_industry_stock'),
 ]
