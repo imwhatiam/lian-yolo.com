@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 
 from .models import Stock, Industry, IndustryStock
-from .utils import get_stock_info_dict, get_trade_info_pd
+from .utils import get_trade_info_pd
 
 logger = logging.getLogger(__name__)
 
@@ -90,43 +90,74 @@ class BigRiseVolumeAPIView(APIView):
     def get(self, request, *args, **kwargs):
 
         last_x_days = int(request.GET.get('last_x_days', 5))
+        rise = int(request.GET.get('rise', 8))
 
-        cache_key = f"big_rise_volume_{last_x_days}"
-        # cached_data = cache.get(cache_key)
-        # if cached_data:
-        #     return Response({"data": cached_data}, status=status.HTTP_200_OK)
+        cache_key = f"big_rise_volume_{last_x_days}_{rise}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response({"data": cached_data}, status=status.HTTP_200_OK)
 
         stock_code_list = IndustryStock.objects.get_stock_code_list()
 
         df = get_trade_info_pd(stock_code_list, last_x_days)
 
         # 成交超8亿，涨幅超8%
+        # formatted_df = df[(df["money"] >= 8e8) & (df["change_pct"] > 8)]
+        # formatted_df = df[(df["money"] >= 1e8) & (df["change_pct"] > 8)]
+
         df["money"] *= 10000
-        result = df[(df["money"] >= 8e8) & (df["change_pct"] > 8)]
-        result = result.sort_values(by="change_pct", ascending=False)
+        formatted_df = df[df["change_pct"] > rise]
+        formatted_df = formatted_df.sort_values(by="change_pct",
+                                                ascending=False)
 
-        result_dict = {}
-        for _, row in result.iterrows():
-            date = str(row['date'])
-            industry = row['industry']
-            name = row['name']
-            change_pct = row['change_pct']
-            money = row['money']
-            
-            # 如果字典中还没有该日期，则初始化为一个空字典
-            if date not in result_dict:
-                result_dict[date] = {}
-            
-            # 如果该日期下还没有该行业，则初始化为一个空列表
-            if industry not in result_dict[date]:
-                result_dict[date][industry] = []
-            
-            # 将需要的数据以列表形式添加到对应的行业列表中
-            result_dict[date][industry].append([name, change_pct, money])
+        # result = {}
+        # for _, row in formatted_df.iterrows():
+        #     date = str(row['date'])
+        #     industry = row['industry']
+        #     name = row['name']
+        #     change_pct = row['change_pct']
+        #     money = row['money']
 
-        for date in result_dict:
-            for industry in result_dict[date]:
-                result_dict[date][industry].sort(key=lambda x: x[1], reverse=True)
+        #     if date not in result:
+        #         result[date] = {}
 
-        # cache.set(cache_key, result_dict, timeout=60 * 60 * 24)
-        return Response({"data": result_dict}, status=status.HTTP_200_OK)
+        #     if industry not in result[date]:
+        #         result[date][industry] = []
+
+        #     result[date][industry].append([name, change_pct, money])
+
+        # for date in result:
+        #     for industry in result[date]:
+        #         result[date][industry].sort(key=lambda x: x[1], reverse=True)
+
+        result = {}
+        for (date, industry), group in formatted_df.groupby(['date', 'industry'],
+                                                            sort=False):
+
+            date = str(date)
+
+            if date not in result:
+                result[date] = {}
+
+            entries = group[['name',
+                             'change_pct',
+                             'money']].sort_values(by=['change_pct', 'money'],
+                                                   ascending=[False, False]).values.tolist()
+
+            result[date][industry] = entries
+
+        # 按日期降序排序，并在每个日期内对 industry 按列表长度降序排序
+        result = {
+            date: {
+                industry: result[date][industry]
+                for industry in sorted(
+                    result[date].keys(),
+                    key=lambda x: len(result[date][x]),
+                    reverse=True
+                )
+            }
+            for date in sorted(result.keys(), reverse=True)
+        }
+
+        cache.set(cache_key, result, timeout=60 * 60 * 24)
+        return Response({"data": result}, status=status.HTTP_200_OK)
