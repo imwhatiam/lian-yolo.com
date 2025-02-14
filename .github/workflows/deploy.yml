@@ -1,23 +1,19 @@
 name: Deploy to Aliyun
-
 on:
   push:
-    branches: [main]  # 监听 main 分支的 push 事件
-
+    branches:
 jobs:
-  deploy:
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: SSH into Server and Deploy
-      uses: appleboy/ssh-action@v1
-      with:
-        host: ${{ secrets.SERVER_IP }}
-        username: ${{ secrets.SSH_USERNAME }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          cd /root/lian-yolo.com  # 项目在服务器上的路径
-          git pull origin main
-          supervisorctl restart lian-yolo
+      - name: SSH into Server and Deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /root/lian-yolo.com
+            git pull origin main
+            supervisorctl restart lian-yolo
