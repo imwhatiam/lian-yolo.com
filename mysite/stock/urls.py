@@ -10,6 +10,10 @@ urlpatterns = [
          api_views.BigRiseVolumeAPIView.as_view(),
          name='big-rise-volume-api-view'),
 
+     path('api/wind-info/',
+          api_views.WindInfoAPIView.as_view(),
+          name='wind-info-api-view'),
+
     path('fupan/', views.fupan, name='stock_fupan'),
     path('import-industry-stock/',
          views.import_industry_stock,
