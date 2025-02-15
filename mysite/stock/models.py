@@ -43,6 +43,9 @@ class StockTradeInfoManager(models.Manager):
     def get_trade_date_list(self, count=50):
         return self.values_list('date', flat=True).distinct().order_by('-date')[:count]
 
+    def get_trade_info_by_date(self, date):
+        return self.filter(date=date)
+
 
 class StockTradeInfo(models.Model):
 

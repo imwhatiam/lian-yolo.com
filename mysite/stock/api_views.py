@@ -1,5 +1,6 @@
 import logging
 import requests
+import pandas as pd
 
 from django.core.cache import cache
 
@@ -89,14 +90,56 @@ class BigRiseVolumeAPIView(APIView):
 
 class TradingCrowdingAPIView(APIView):
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
+
+        try:
+            json_data = request.data
+        except ValueError:
+            return Response({"error": "Invalid JSON format"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        industry_list = json_data.get("industry_list", [])
+        if not industry_list:
+            return Response({"error": "Industry list is empty"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        cache_key = f"trading_crowding_{','.join(industry_list)}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data, status=status.HTTP_200_OK)
 
         trade_date_list = StockTradeInfo.objects.get_trade_date_list()
-        result = {
-            "trade_date_list": trade_date_list,
-        }
-        return Response({"data": result},
-                        status=status.HTTP_200_OK)
+        result = {}
+
+        for trade_date in trade_date_list:
+
+            trade_infos = StockTradeInfo.objects.filter(date=trade_date)
+            trade_data = list(trade_infos.values('code', 'money'))
+            df_trade = pd.DataFrame(trade_data)
+            if df_trade.empty:
+                continue
+
+            total_money = df_trade['money'].sum()
+
+            codes = df_trade['code'].unique()
+            stocks = IndustryStock.objects.filter(code__in=codes)
+
+            code_to_industry = {stock.code: stock.industry for stock in stocks}
+            df_trade['industry'] = df_trade['code'].map(code_to_industry)
+
+            industry_money = {}
+            for industry in industry_list:
+                money_sum = df_trade[df_trade['industry'] == industry]['money'].sum()
+                industry_money[f"{industry}"] = money_sum
+
+            result[str(trade_date)] = {
+                'total_money': total_money,
+                **industry_money
+            }
+
+        cache.set(cache_key, result, timeout=60 * 60 * 24)
+
+        return Response({"data": result}, status=status.HTTP_200_OK)
 
 
 class WindInfoAPIView(APIView):
