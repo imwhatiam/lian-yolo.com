@@ -17,7 +17,7 @@ jobs:
             source /root/django-5.0/bin/activate
             cd /root/lian-yolo.com/mysite
             git pull origin main
-            python3 manage.py collectstatic
+            python3 manage.py collectstatic --noinput
             python3 manage.py migrate
 
             supervisorctl restart lian-yolo
