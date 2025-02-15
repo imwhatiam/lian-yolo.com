@@ -6,84 +6,11 @@ from django.core.cache import cache
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser
 
-from .models import Stock, Industry, IndustryStock
+from .models import IndustryStock, StockTradeInfo
 from .utils import get_trade_info_pd
 
 logger = logging.getLogger(__name__)
-
-
-class StockIndustryInfoAPIView(APIView):
-    """
-    API View to handle POST requests for adding stock data.
-    """
-    permission_classes = [IsAdminUser]
-
-    def create_or_update_record(self, model, unique_field, data_dict, defaults):
-        """
-        A helper function to handle get_or_create logic and logging warnings for mismatched data.
-
-        :param model: Django model to perform operations on
-        :param unique_field: Field name to filter the model
-        :param data_dict: Dictionary of data to filter or create
-        :param defaults: Default values for creating a new record
-        """
-        obj, created = model.objects.get_or_create(
-            **{unique_field: data_dict[unique_field]},
-            defaults=defaults
-        )
-
-        if not created:
-            db_data = {field: getattr(obj, field) for field in data_dict.keys()}
-            if data_dict != db_data:
-                msg = f"{model.__name__} info mismatch: {data_dict} != {db_data}"
-                logger.warning(msg)
-
-    def handle_industries(self, industries_dict, level):
-        """
-        A helper function to process industry data.
-
-        :param industries_dict: Dictionary containing industry data
-        :param level: Industry level (2 or 3)
-        """
-        for code, name in industries_dict.items():
-            if code:
-                self.create_or_update_record(
-                    model=Industry,
-                    unique_field="code",
-                    data_dict={"code": code, "name": name, "level": level},
-                    defaults={"name": name, "level": level}
-                )
-
-    def post(self, request, *args, **kwargs):
-
-        json_data = request.data
-
-        # Process stock data
-        stock_data_list = json_data.get('stocks', [])
-        for stock_data in stock_data_list:
-            code, name, sw_l2, sw_l3 = (
-                stock_data[0],
-                stock_data[1] or '',
-                stock_data[2] or '',
-                stock_data[3] or ''
-            )
-            if code and name:
-                self.create_or_update_record(
-                    model=Stock,
-                    unique_field="code",
-                    data_dict={"code": code, "name": name, "sw_l2": sw_l2, "sw_l3": sw_l3},
-                    defaults={"name": name, "sw_l2": sw_l2, "sw_l3": sw_l3}
-                )
-
-        # Process industry data
-        industries = json_data.get('industris', {})
-        self.handle_industries(industries.get('sw_l2', {}), level='2')
-        self.handle_industries(industries.get('sw_l3', {}), level='3')
-
-        return Response({"message": "Record created successfully."},
-                        status=status.HTTP_201_CREATED)
 
 
 class BigRiseVolumeAPIView(APIView):
@@ -158,6 +85,18 @@ class BigRiseVolumeAPIView(APIView):
         cache.set(cache_key, ordered_result, timeout=60 * 60 * 24)
 
         return Response({"data": ordered_result}, status=status.HTTP_200_OK)
+
+
+class TradingCrowdingAPIView(APIView):
+
+    def get(self, request, *args, **kwargs):
+
+        trade_date_list = StockTradeInfo.objects.get_trade_date_list()
+        result = {
+            "trade_date_list": trade_date_list,
+        }
+        return Response({"data": result},
+                        status=status.HTTP_200_OK)
 
 
 class WindInfoAPIView(APIView):

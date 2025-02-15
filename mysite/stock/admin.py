@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import StockTradeInfo, Stock, Industry, IndustryStock
+from .models import StockTradeInfo, IndustryStock
 
 
 @admin.register(StockTradeInfo)
@@ -25,29 +25,6 @@ class StockTradeInfoAdmin(admin.ModelAdmin):
         return obj.date.strftime("%Y-%m-%d")
 
     formatted_date.admin_order_field = "date"  # 允许按日期排序
-
-
-@admin.register(Stock)
-class StockAdmin(admin.ModelAdmin):
-
-    list_display = [
-        "code",
-        "name",
-        "sw_l2",
-        "sw_l3",
-    ]
-    search_fields = ["code", "name", "sw_l2", "sw_l3"]
-
-
-@admin.register(Industry)
-class IndustryAdmin(admin.ModelAdmin):
-
-    list_display = [
-        "code",
-        "name",
-        "level",
-    ]
-    search_fields = ["code", "name", "level"]
 
 
 @admin.register(IndustryStock)

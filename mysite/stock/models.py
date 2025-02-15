@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class IndustryStockManager(models.Manager):
 
     def get_industry_name_list(self):
@@ -37,40 +38,10 @@ class IndustryStock(models.Model):
         super().save(*args, **kwargs)
 
 
-class Industry(models.Model):
+class StockTradeInfoManager(models.Manager):
 
-    code = models.CharField(max_length=10, db_index=True, unique=True)
-    name = models.CharField(max_length=100, db_index=True)
-    level = models.CharField(max_length=10, db_index=True)
-
-    def __str__(self):
-        return self.name
-
-    def save(self, *args, **kwargs):
-        if self.code:
-            self.code = self.code.zfill(6)
-        super().save(*args, **kwargs)
-
-
-class Stock(models.Model):
-
-    code = models.CharField(max_length=10, db_index=True, unique=True)
-    name = models.CharField(max_length=100, db_index=True, unique=True)
-    sw_l2 = models.CharField(max_length=10, db_index=True)
-    sw_l3 = models.CharField(max_length=10, db_index=True)
-
-    def __str__(self):
-        return self.name
-
-    def save(self, *args, **kwargs):
-        # 自动补齐为 6 位
-        if self.code:
-            self.code = self.code.zfill(6)
-        if self.sw_l2:
-            self.sw_l2 = self.sw_l2.zfill(6)
-        if self.sw_l3:
-            self.sw_l3 = self.sw_l3.zfill(6)
-        super().save(*args, **kwargs)
+    def get_trade_date_list(self, count=50):
+        return self.values_list('date', flat=True).distinct().order_by('-date')[:count]
 
 
 class StockTradeInfo(models.Model):
@@ -84,6 +55,8 @@ class StockTradeInfo(models.Model):
     high_price = models.DecimalField(max_digits=10, decimal_places=2)
     low_price = models.DecimalField(max_digits=10, decimal_places=2)
     money = models.DecimalField(max_digits=10, decimal_places=2)
+
+    objects = StockTradeInfoManager()
 
     class Meta:
         constraints = [
