@@ -13,4 +13,6 @@ pandas==2.2.3
 djangorestframework==3.15.2
 pymemcache==4.0.0
 django-cors-headers==4.6.0
+chardet==5.2.0
+requests==2.32.3
 chinesecalendar

@@ -1,10 +1,13 @@
+import csv
 import logging
+import chardet
 import pandas as pd
 
 from django.shortcuts import render
 from django.views.decorators.cache import cache_page
+from django.http import HttpResponseForbidden, HttpResponse
 
-from .models import StockTradeInfo
+from .models import StockTradeInfo, IndustryStock
 
 logger = logging.getLogger(__name__)
 
@@ -127,3 +130,67 @@ def fupan(request):
     }
 
     return render(request, 'stock/fupan.html', data)
+
+
+def import_industry_stock(request):
+
+    def detect_encoding(uploaded_file):
+        raw_data = uploaded_file.read(10000)
+        uploaded_file.seek(0)  # 重要！重置文件指针，以便后续读取不受影响
+        encoding_detected = chardet.detect(raw_data)["encoding"]
+        return encoding_detected
+
+    if request.method == 'GET':
+        return render(request, 'stock/import_industry_stock.html')
+
+    if request.method == 'POST' and request.FILES.get('file'):
+
+        if not (request.user.is_authenticated and request.user.is_superuser):
+            return HttpResponseForbidden("权限不足：需要管理员身份")
+
+        csv_file = request.FILES['file']
+        encoding_str = detect_encoding(csv_file)
+        decoded_file = csv_file.read().decode(encoding_str).splitlines()
+
+        # 使用制表符分隔的DictReader
+        reader = csv.DictReader(decoded_file, delimiter='\t')
+
+        changed_entries = []
+        for row in reader:
+            code = row.get('代码', '').lstrip("'")
+            name = row.get('名称', '')
+            industry = row.get('所属行业', '')
+
+            if industry == '--':
+                continue
+
+            stock, created = IndustryStock.objects.get_or_create(
+                code=code,
+                defaults={'name': name, 'industry': industry}
+            )
+
+            if created:
+                changed_entries.append({'代码': code,
+                                        '名称': name,
+                                        '所属行业': industry,
+                                        '类型': '新增'})
+            else:
+                if stock.name != name or stock.industry != industry:
+                    changed_entries.append({'代码': code,
+                                            '名称': name,
+                                            '所属行业': industry,
+                                            '类型': '更新'})
+                    stock.name = name
+                    stock.industry = industry
+                    stock.save()
+
+        response_data = {
+            'data_list': changed_entries,
+            'success': True
+        }
+        return render(request,
+                      'stock/import_industry_stock.html',
+                      response_data)
+
+    # 处理非POST请求
+    return HttpResponse("请使用POST方法上传CSV文件")

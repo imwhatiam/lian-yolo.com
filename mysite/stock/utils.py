@@ -2,9 +2,7 @@ import pandas as pd
 import chinese_calendar as calendar
 from datetime import datetime, timedelta
 
-from django.db.models import QuerySet
-
-from .models import Stock, Industry, StockTradeInfo
+from .models import StockTradeInfo, IndustryStock
 
 
 def is_future_date(date_str):
@@ -45,50 +43,9 @@ def is_weekend_or_holiday(date_str):
     return False, ''
 
 
-def get_stock_info_dict() -> dict:
-
-    """
-    获取所有股票信息，返回以股票代码为键的字典。
-
-    :return: 字典，格式为 {code: {'name': ..., 'sw_l2': ..., 'sw_l3': ...}}
-    """
-
-    stocks: QuerySet = Stock.objects.all()
-
-    stock_info_dict = {
-        stock.code: {
-            'name': stock.name,
-            'sw_l2': stock.sw_l2,
-            'sw_l3': stock.sw_l3
-        }
-        for stock in stocks
-    }
-
-    return stock_info_dict
-
-
-def get_industry_info_dict() -> dict:
-
-    """
-    获取所有行业信息，返回以行业代码为键的字典。
-
-    :return: 字典，格式为 {code: {'name': ..., 'level': ...}}
-    """
-
-    industries: QuerySet = Industry.objects.all()
-
-    industry_info_dict = {
-        industry.code: {
-            'name': industry.name,
-            'level': industry.level
-        }
-        for industry in industries
-    }
-
-    return industry_info_dict
-
-
 def get_trade_info_pd(stock_code_list, last_x_days):
+
+    stock_code_industry_dict = IndustryStock.objects.get_stock_code_industry_dict()
 
     data_list = []
     for code in stock_code_list:
@@ -100,6 +57,7 @@ def get_trade_info_pd(stock_code_list, last_x_days):
                 'date': trade_info.date,
                 'code': trade_info.code,
                 'name': trade_info.name,
+                'industry': stock_code_industry_dict.get(trade_info.code, ''),
                 'close_price': trade_info.close_price,
                 'money': trade_info.money
             })
