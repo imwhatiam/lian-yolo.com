@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 class BigRiseVolumeAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
+
         # Extract and parse query parameters with defaults
         last_x_days = int(request.GET.get('last_x_days', 5))
         rise = int(request.GET.get('rise', 8))
@@ -96,40 +97,56 @@ class TradingCrowdingAPIView(APIView):
         try:
             json_data = request.data
         except ValueError:
-            return Response({"error": "Invalid JSON format"},
+            error_msg = "Invalid JSON format"
+            return Response({"error": error_msg},
                             status=status.HTTP_400_BAD_REQUEST)
+
+        cache_key_parts = ["trading_crowding"]
+
+        # check parameters and generate cache key
+        last_x_days = int(request.GET.get('last_x_days', 50))
+        try:
+            last_x_days = int(last_x_days)
+            cache_key_parts.append(str(last_x_days))
+        except ValueError:
+            error_msg = f"Invalid last_x_days: {last_x_days}"
+            return Response({"error": error_msg},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        latest_trade_date = json_data.get("latest_trade_date")
+        if latest_trade_date:
+            try:
+                # 2025-01-01
+                latest_trade_date_obj = datetime.strptime(latest_trade_date,
+                                                          "%Y-%m-%d").date()
+                cache_key_parts.append(latest_trade_date)
+            except ValueError:
+                error_msg = f"Invalid latest_trade_date: {latest_trade_date}"
+                return Response({"error": error_msg},
+                                status=status.HTTP_400_BAD_REQUEST)
 
         industry_list = json_data.get("industry_list", [])
         if not industry_list:
-            return Response({"error": "Industry list is empty"},
+            error_msg = "Industry list is empty"
+            return Response({"error": error_msg},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        cache_key_parts = [f"trading_crowding_{','.join(industry_list)}"]
-
-        latest_trade_date_str = json_data.get("last_trade_date")
-        if latest_trade_date_str:
-            try:
-                latest_trade_date = datetime.strptime(latest_trade_date_str,
-                                                      "%Y-%m-%d").date()
-                cache_key_parts.append(latest_trade_date_str)
-            except ValueError:
-                return Response({"error": "Invalid latest_trade_date format"},
-                                status=status.HTTP_400_BAD_REQUEST)
-
         # check if data is already cached
+        cache_key_parts.append(','.join(industry_list))
         cache_key = '_'.join(cache_key_parts)
         cached_data = cache.get(cache_key)
         if cached_data:
             return Response(cached_data, status=status.HTTP_200_OK)
 
         # get trade date list
-        if latest_trade_date_str:
+        if latest_trade_date:
             trade_dates = StockTradeInfo.objects.filter(
-                date__lte=latest_trade_date
-            ).order_by('-date').values_list('date', flat=True).distinct()[:50]
-            trade_date_list = sorted(trade_dates)  # Convert to ascending order
+                date__lte=latest_trade_date_obj
+            ).order_by('-date').values_list('date', flat=True).distinct()[:last_x_days]
+
+            trade_date_list = sorted(trade_dates)
         else:
-            trade_date_list = StockTradeInfo.objects.get_trade_date_list()
+            trade_date_list = StockTradeInfo.objects.get_trade_date_list(count=last_x_days)
 
         # Process and generate result
         result = {}

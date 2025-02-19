@@ -40,7 +40,7 @@ class IndustryStock(models.Model):
 
 class StockTradeInfoManager(models.Manager):
 
-    def get_trade_date_list(self, count=50):
+    def get_trade_date_list(self, count=30):
         return self.values_list('date', flat=True).distinct().order_by('-date')[:count]
 
     def get_trade_info_by_date(self, date):
