@@ -4,7 +4,7 @@ from django.db import models
 class IndustryStockManager(models.Manager):
 
     def get_industry_name_list(self):
-        return self.values('industry').distinct()
+        return self.values_list('industry', flat=True).distinct()
 
     def get_stock_code_industry_dict(self):
         values = self.values_list('code', 'industry')

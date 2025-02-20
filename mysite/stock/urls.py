@@ -10,6 +10,10 @@ urlpatterns = [
          api_views.TradingCrowdingAPIView.as_view(),
          name='wind-info-api-view'),
 
+    path('api/industry-list/',
+         api_views.IndustryListAPIView.as_view(),
+         name='industry-list-api-view'),
+
     path('api/wind-info/',
          api_views.WindInfoAPIView.as_view(),
          name='wind-info-api-view'),

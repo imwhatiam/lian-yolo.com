@@ -15,6 +15,13 @@ from .utils import get_trade_info_pd
 logger = logging.getLogger(__name__)
 
 
+class IndustryListAPIView(APIView):
+
+    def get(self, request, *args, **kwargs):
+        industry_list = IndustryStock.objects.get_industry_name_list()
+        return Response({"data": industry_list}, status=status.HTTP_200_OK)
+
+
 class BigRiseVolumeAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
@@ -33,7 +40,7 @@ class BigRiseVolumeAPIView(APIView):
 
         # Fetch stock codes and retrieve trade data
         stock_code_list = IndustryStock.objects.get_stock_code_list()
-        df = get_trade_info_pd(stock_code_list, last_x_days)
+        df = get_trade_info_pd(stock_code_list, last_x_days+1)
 
         # Data preprocessing
         # Convert money unit from 10k to yuan (assuming original unit is 10k RMB)
@@ -136,7 +143,7 @@ class TradingCrowdingAPIView(APIView):
         cache_key = '_'.join(cache_key_parts)
         cached_data = cache.get(cache_key)
         if cached_data:
-            return Response(cached_data, status=status.HTTP_200_OK)
+            return Response({"data": cached_data}, status=status.HTTP_200_OK)
 
         # get trade date list
         if latest_trade_date:
@@ -191,7 +198,7 @@ class WindInfoAPIView(APIView):
         # Check if data is already cached
         cached_data = cache.get(cache_key)
         if cached_data:
-            return Response(cached_data, status=status.HTTP_200_OK)
+            return Response({"data": cached_data}, status=status.HTTP_200_OK)
 
         wind_api_url = "https://index_api.wind.com.cn/indexofficialwebsite/Kline"
 
@@ -206,7 +213,7 @@ class WindInfoAPIView(APIView):
             cache.set(cache_key, result, timeout=60 * 60 * 24)
 
             # Return the Wind API's response
-            return Response(result, status=status.HTTP_200_OK)
+            return Response({"data": result}, status=status.HTTP_200_OK)
         else:
             # Return an error response if the request failed
             return Response({"error": "Failed to fetch data from Wind API"},
