@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'douban',
     'stock',
     'react_naive_book',
+    'weixin_miniprogram',
 ]
 
 MIDDLEWARE = [

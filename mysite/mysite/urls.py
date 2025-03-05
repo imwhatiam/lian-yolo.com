@@ -27,6 +27,7 @@ urlpatterns = [
     path('pdf-to-img/', include('pdf_to_img.urls')),
     path('douban/', include('douban.urls')),
     path('stock/', include('stock.urls')),
+    path('weixin-miniprogram/', include('weixin_miniprogram.urls')),
 
     path('react/', react_home),
     path('react-naive-book/', include('react_naive_book.urls')),
