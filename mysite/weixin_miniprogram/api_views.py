@@ -113,8 +113,7 @@ class CheckListView(APIView):
 
         depth = int(request.GET.get('depth', 1))
         try:
-            checklist = CheckList.objects.get(id=id)
-            # Instantiate serializer with depth=1
+            checklist = CheckList.objects.get(id=checklist_id)
             serializer = CheckListSerializer(checklist, depth=depth)
             return Response(serializer.data)
         except CheckList.DoesNotExist:

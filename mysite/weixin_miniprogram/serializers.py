@@ -22,9 +22,7 @@ class CheckListSerializer(serializers.ModelSerializer):
 
         children = sorted(
             obj.get_children(),
-            key=lambda x: (
-                chinese_order.get(x.title[0], 99),  # 按首字符排序
-                x.title
-            )
+            key=lambda x: (chinese_order.get(x.title[0], 99), x.title),
+            reverse=True
         )
         return CheckListSerializer(children, many=True, depth=self.depth + 1).data
