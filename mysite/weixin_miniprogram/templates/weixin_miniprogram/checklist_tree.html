@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Checklist Tree</title>
+    <style>
+        .tree ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+        .tree li {
+            margin: 5px 0;
+        }
+        .toggle-btn {
+            cursor: pointer;
+            margin-right: 5px;
+            width: 20px;
+            height: 20px;
+        }
+        .node {
+            display: flex;
+            align-items: center;
+        }
+        .children {
+            display: none;
+        }
+        .search-box {
+            margin-bottom: 20px;
+        }
+        .search-box input {
+            padding: 5px;
+            width: 300px;
+        }
+        .search-box button {
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-box">
+        <form method="get" action="">
+            <input type="text" name="q" placeholder="Search by title" value="{{ query }}">
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    <div class="tree">
+        <ul>
+            {% for node in nodes %}
+                {% include "weixin_miniprogram/checklist_node.html" %}
+            {% endfor %}
+        </ul>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.toggle-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const childrenDiv = this.parentNode.nextElementSibling;
+                    if (childrenDiv && childrenDiv.classList.contains('children')) {
+                        if (childrenDiv.style.display === 'none' || childrenDiv.style.display === '') {
+                            childrenDiv.style.display = 'block';
+                            this.textContent = '-';
+                        } else {
+                            childrenDiv.style.display = 'none';
+                            this.textContent = '+';
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

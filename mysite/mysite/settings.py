@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',
 
     'mysite',
@@ -47,6 +48,7 @@ INSTALLED_APPS = [
     'douban',
     'stock',
     'react_naive_book',
+    'weixin_miniprogram',
 ]
 
 MIDDLEWARE = [
@@ -59,6 +61,16 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ]
+}
 
 ROOT_URLCONF = 'mysite.urls'
 
@@ -129,6 +141,10 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
+# 媒体文件配置
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # 文件存储路径
+MEDIA_URL = '/media/'  # 访问URL前缀
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
@@ -169,7 +185,9 @@ LOGGING = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://lian-yolo-frontend.vercel.app"
+]
+CSRF_TRUSTED_ORIGINS = [
+    'https://www.lian-yolo.com',
 ]
 
 # for dev env

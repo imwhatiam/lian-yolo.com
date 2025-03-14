@@ -16,6 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 from .views import index, react_home
 
@@ -27,7 +29,8 @@ urlpatterns = [
     path('pdf-to-img/', include('pdf_to_img.urls')),
     path('douban/', include('douban.urls')),
     path('stock/', include('stock.urls')),
+    path('weixin-miniprogram/', include('weixin_miniprogram.urls')),
 
     path('react/', react_home),
     path('react-naive-book/', include('react_naive_book.urls')),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

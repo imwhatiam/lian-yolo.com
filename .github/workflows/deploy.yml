@@ -14,9 +14,17 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+
             source /root/django-5.0/bin/activate
             cd /root/lian-yolo.com/mysite
-            git pull origin main
+
+            git checkout -b tmp
+            git branch -D main
+            git fetch origin main:main
+            git checkout main
+            git branch -D tmp
+
+            pip install -r /root/lian-yolo.com/requirements.txt
             python3 manage.py collectstatic --noinput
             python3 manage.py migrate
 

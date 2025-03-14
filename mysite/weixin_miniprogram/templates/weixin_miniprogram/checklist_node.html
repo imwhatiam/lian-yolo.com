@@ -1,0 +1,17 @@
+<li>
+    <div class="node">
+        {% if node.children.all %}
+            <button class="toggle-btn">+</button>
+        {% endif %}
+        <a href="{% url 'admin:weixin_miniprogram_checklist_change' node.id %}" target="_blank">{{node.order_num}}，{{ node.title }} ({{ node.id }})</a>
+    </div>
+    {% if node.children.all %}
+        <div class="children">
+            <ul>
+                {% for child in node.children.all %}
+                    {% include "weixin_miniprogram/checklist_node.html" with node=child %}
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+</li>
