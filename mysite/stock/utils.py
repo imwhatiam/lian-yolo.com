@@ -1,8 +1,10 @@
+import logging
 import pandas as pd
 import chinese_calendar as calendar
 from datetime import datetime, timedelta
 
 from .models import StockTradeInfo, IndustryStock
+logger = logging.getLogger(__name__)
 
 
 def is_future_date(date_str):
@@ -53,6 +55,8 @@ def get_trade_info_pd(stock_code_list, last_x_days):
         trade_infos = trade_infos.order_by('-date')[:last_x_days]
 
         for trade_info in trade_infos:
+            if trade_info.close_price <= 0:
+                logger.error(trade_info)
             data_list.append({
                 'date': trade_info.date,
                 'code': trade_info.code,
@@ -63,6 +67,9 @@ def get_trade_info_pd(stock_code_list, last_x_days):
             })
 
     df = pd.DataFrame(data_list)
+    df = df[df['close_price'] != 0]
+    assert df['close_price'].min() > 0, "存在非正收盘价，需要数据清洗"
+
     df = df.iloc[::-1].reset_index(drop=True)  # reverse id
     df['change_pct'] = df.groupby('code')['close_price'].pct_change() * 100
     df["change_pct"] = pd.to_numeric(df["change_pct"], errors="coerce").fillna(0).round(2)
