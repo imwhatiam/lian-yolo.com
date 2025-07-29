@@ -28,6 +28,7 @@ urlpatterns = [
 
     path('pdf-to-img/', include('pdf_to_img.urls')),
     path('douban/', include('douban.urls')),
+    path('weather/', include('weather.urls')),
     path('stock/', include('stock.urls')),
     path('weixin-miniprogram/', include('weixin_miniprogram.urls')),
 

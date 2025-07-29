@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'corsheaders',
 
     'mysite',
+    'weather',
     'pdf_to_img',
     'douban',
     'stock',
