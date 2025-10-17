@@ -1,6 +1,4 @@
 import os
-import time
-import json
 import requests
 
 from rest_framework import status
@@ -8,7 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 
-from .models import UserActivity, CheckList
+from .models import CheckList
 from .serializers import CheckListSerializer
 from utils.admin_permission import PostAdminOnly, DeleteAdminOnly
 
@@ -57,54 +55,6 @@ class JSCode2SessionView(APIView):
         result = {}
         result["openid"] = openid
         return Response({"data": result}, status=status.HTTP_200_OK)
-
-
-class UserActivities(APIView):
-
-    authentication_classes = [TokenAuthentication, SessionAuthentication]
-    permission_classes = [PostAdminOnly]
-
-    def get(self, request, *args, **kwargs):
-
-        openid = request.GET.get("openid")
-        if not openid:
-            error_msg = "openid is required"
-            return Response({"error": error_msg},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        user_activity = UserActivity.objects.filter(openid=openid).first()
-        if not user_activity:
-            return Response({"data": {"activities": []}},
-                            status=status.HTTP_200_OK)
-
-        return Response({"data": {"activities": user_activity.activities}},
-                        status=status.HTTP_200_OK)
-
-    def post(self, request, *args, **kwargs):
-
-        openid = request.data.get("openid")
-        if not openid:
-            error_msg = "openid is required"
-            return Response({"error": error_msg},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        nickname = request.data.get("nickname")
-        avatar_url = request.data.get("avatar_url")
-        activities = request.data.get("activities", [])
-        activities_json = json.loads(activities)
-
-        obj, created = UserActivity.objects.update_or_create(
-            openid=openid,
-            defaults={
-                "nickname": nickname,
-                "avatar_url": avatar_url,
-                "activities": activities_json,
-                "updated_at": int(time.time())
-                }
-        )
-
-        return Response({"data": {"success": True}},
-                        status=status.HTTP_200_OK)
 
 
 class CheckListView(APIView):
