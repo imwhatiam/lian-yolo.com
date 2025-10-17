@@ -21,10 +21,8 @@ urlpatterns = [
          CheckListSearchView.as_view(),
          name='checklist-search-api-view'),
 
-    path('api/activities/', views.create_activity, name='create_activity'),
-    path('api/activities/<int:id>/', views.get_activity_detail, name='get_activity_detail'),
-    path('api/activities/<int:id>/white_list/add/', views.add_white_list, name='add_white_list'),
-    path('api/activities/<int:id>/white_list/remove/', views.remove_white_list, name='remove_white_list'),
-    path('api/activities/<int:id>/items/update/', views.update_activity_item, name='update_activity_item'),
-    path('api/activities/<int:id>/items/add/', views.add_activity_item, name='add_activity_item'),
+    path('api/activities/', views.activities, name='activities'),
+    path('api/activities/<int:id>/', views.activity, name='activity'),
+    path('api/activities/<int:id>/white_list/', views.activity_white_list, name='activity_white_list'),
+    path('api/activities/<int:id>/items/', views.activity_items, name='activity_items'),
 ]

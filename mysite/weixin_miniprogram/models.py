@@ -31,11 +31,11 @@ class CheckList(models.Model):
         return self.image.url if self.image else ''
 
 
-class Activity(models.Model):
+class Activities(models.Model):
     creator_weixin_id = models.CharField(max_length=255, verbose_name="用户微信ID")
     creator_weixin_name = models.CharField(max_length=255, verbose_name="用户微信名称")
     activity_title = models.CharField(max_length=255, verbose_name="活动名称")
-    activity_item = models.JSONField(encoder=DjangoJSONEncoder, verbose_name="活动事项列表")
+    activity_items = models.JSONField(encoder=DjangoJSONEncoder, verbose_name="活动事项列表")
     white_list = models.JSONField(encoder=DjangoJSONEncoder, default=list, verbose_name="白名单")
 
     class Meta:

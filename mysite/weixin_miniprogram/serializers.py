@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CheckList, Activity
+from .models import CheckList, Activities
 
 
 class CheckListSerializer(serializers.ModelSerializer):
@@ -23,31 +23,31 @@ class CheckListSerializer(serializers.ModelSerializer):
 
 class ActivityCreateSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Activity
-        fields = ['creator_weixin_id', 'creator_weixin_name', 'activity_title', 'activity_item']
-
-
-class WhiteListUpdateSerializer(serializers.Serializer):
-    creator_weixin_id = serializers.CharField(max_length=255)
-    guest_weixin_id_list = serializers.ListField(
-        child=serializers.CharField(max_length=255)
-    )
-
-
-class ActivityItemUpdateSerializer(serializers.Serializer):
-    activity_item_id = serializers.IntegerField()
-    activity_item_operator = serializers.CharField(max_length=255)
-    activity_item_status = serializers.ChoiceField(
-        choices=['checked', 'deleted', '']
-    )
-
-
-class ActivityItemAddSerializer(serializers.Serializer):
-    creator_weixin_id = serializers.CharField(max_length=255)
-    activity_item = serializers.DictField()
+        model = Activities
+        fields = ['creator_weixin_id', 'creator_weixin_name',
+                  'activity_title', 'activity_items', 'white_list']
 
 
 class ActivitySerializer(serializers.ModelSerializer):
     class Meta:
-        model = Activity
+        model = Activities
         fields = '__all__'
+
+
+class ActivityDeleteSerializer(serializers.Serializer):
+    weixin_id = serializers.CharField(max_length=255)
+
+
+class ActivityWhiteListUpdateSerializer(serializers.Serializer):
+    weixin_id = serializers.CharField(max_length=255)
+    white_list = serializers.ListField(
+        child=serializers.CharField(max_length=255)
+    )
+
+
+class ActivityItemsUpdateSerializer(serializers.Serializer):
+    weixin_id = serializers.CharField(max_length=255)
+    activity_item_id = serializers.IntegerField()
+    activity_item_status = serializers.ChoiceField(
+        choices=['checked', 'deleted', '']
+    )
