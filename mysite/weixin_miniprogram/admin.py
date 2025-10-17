@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import CheckList
+
+from .models import CheckList, Activities
 
 
 @admin.register(CheckList)
@@ -18,3 +19,25 @@ class CheckListAdmin(admin.ModelAdmin):
                 obj.image.url
             )
         return "-"
+
+
+@admin.register(Activities)
+class ActivityAdmin(admin.ModelAdmin):
+
+    list_display = [
+        'id',
+        'activity_title',
+        'creator_weixin_name',
+        'creator_weixin_id',
+        'white_list',
+    ]
+
+    search_fields = [
+        'activity_title',
+        'creator_weixin_name',
+        'creator_weixin_id'
+    ]
+
+    list_per_page = 20
+
+    ordering = ('-id',)
