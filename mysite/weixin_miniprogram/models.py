@@ -1,5 +1,6 @@
 import time
 from django.db import models
+from django.core.serializers.json import DjangoJSONEncoder
 
 
 def current_timestamp():
@@ -47,3 +48,19 @@ class CheckList(models.Model):
     @property
     def image_url(self):
         return self.image.url if self.image else ''
+
+
+class Activity(models.Model):
+    creator_weixin_id = models.CharField(max_length=255, verbose_name="用户微信ID")
+    creator_weixin_name = models.CharField(max_length=255, verbose_name="用户微信名称")
+    activity_title = models.CharField(max_length=255, verbose_name="活动名称")
+    activity_item = models.JSONField(encoder=DjangoJSONEncoder, verbose_name="活动事项列表")
+    white_list = models.JSONField(encoder=DjangoJSONEncoder, default=list, verbose_name="白名单")
+
+    class Meta:
+        db_table = 'activity'
+        verbose_name = '活动'
+        verbose_name_plural = '活动'
+
+    def __str__(self):
+        return f"{self.activity_title} (ID: {self.id})"
