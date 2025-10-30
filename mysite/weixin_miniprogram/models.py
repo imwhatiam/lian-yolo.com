@@ -45,3 +45,17 @@ class Activities(models.Model):
 
     def __str__(self):
         return f"{self.activity_title} (ID: {self.id})"
+
+
+class WeixinUserInfo(models.Model):
+    openid = models.CharField(db_index=True, max_length=100, unique=True)
+    nickname = models.CharField(blank=True, max_length=100, null=True)
+    avatar_url = models.URLField(blank=True, max_length=500, null=True)
+
+    class Meta:
+        db_table = 'weixin_user_info'
+        verbose_name = '微信用户信息'
+        verbose_name_plural = '微信用户信息'
+
+    def __str__(self):
+        return f'{self.nickname} ({self.openid})'

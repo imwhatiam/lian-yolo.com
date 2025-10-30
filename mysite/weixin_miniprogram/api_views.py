@@ -1,4 +1,5 @@
 import os
+import logging
 import requests
 
 from rest_framework import status
@@ -6,9 +7,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 
-from .models import CheckList
+from .models import CheckList, WeixinUserInfo
 from .serializers import CheckListSerializer
 from utils.admin_permission import PostAdminOnly, DeleteAdminOnly
+
+logger = logging.getLogger(__name__)
 
 
 class JSCode2SessionView(APIView):
@@ -18,6 +21,8 @@ class JSCode2SessionView(APIView):
         code = request.data.get("code")
         if not code:
             error_msg = "code is required"
+            logger.error(error_msg)
+            logger.error(request.data)
             return Response({"error": error_msg},
                             status=status.HTTP_400_BAD_REQUEST)
 
@@ -25,6 +30,8 @@ class JSCode2SessionView(APIView):
         app_secret = os.getenv("WEIXIN_MINIPROGRAM_APP_SECRET")
         if not app_id or not app_secret:
             error_msg = "failed to get app_id or app_secret"
+            logger.error(error_msg)
+            logger.error(request.data)
             return Response({"error": error_msg},
                             status=status.HTTP_400_BAD_REQUEST)
 
@@ -42,19 +49,36 @@ class JSCode2SessionView(APIView):
 
         r = requests.get(url, params=params)
         if r.status_code != 200:
-            error_msg = "failed to get session_key"
+            error_msg = "failed to get openid"
+            logger.error(error_msg)
+            logger.error(request.data)
+            logger.error(r.json())
             return Response({"error": error_msg},
                             status=status.HTTP_400_BAD_REQUEST)
 
         openid = r.json().get("openid")
         if not openid:
             error_msg = "failed to get openid"
+            logger.error(error_msg)
+            logger.error(request.data)
+            logger.error(r.json())
             return Response({"error": error_msg},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        result = {}
-        result["openid"] = openid
-        return Response({"data": result}, status=status.HTTP_200_OK)
+        nickname = request.data.get("nickname")
+        avatar_url = request.data.get("avatar_url")
+
+        user, _ = WeixinUserInfo.objects.get_or_create(openid=openid)
+        user.nickname = nickname
+        user.avatar_url = avatar_url
+        user.save()
+
+        user_info = {}
+        user_info["openid"] = openid
+        user_info["nickname"] = nickname
+        user_info["avatar_url"] = avatar_url
+
+        return Response({"data": user_info}, status=status.HTTP_200_OK)
 
 
 class CheckListView(APIView):
