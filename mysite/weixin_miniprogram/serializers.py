@@ -38,6 +38,11 @@ class ActivityDeleteSerializer(serializers.Serializer):
     weixin_id = serializers.CharField(max_length=255)
 
 
+class ActivityTitleUpdateSerializer(serializers.Serializer):
+    weixin_id = serializers.CharField(max_length=255)
+    activity_title = serializers.CharField(max_length=255)
+
+
 class ActivityWhiteListUpdateSerializer(serializers.Serializer):
     weixin_id = serializers.CharField(max_length=255)
     white_list = serializers.ListField(

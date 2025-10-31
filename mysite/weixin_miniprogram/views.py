@@ -9,7 +9,7 @@ from .models import CheckList, Activities
 
 from .serializers import ActivityCreateSerializer, ActivityDeleteSerializer, \
         ActivityWhiteListUpdateSerializer, ActivityItemsUpdateSerializer, \
-        ActivitySerializer
+        ActivitySerializer, ActivityTitleUpdateSerializer
 
 
 def checklist_tree(request):
@@ -82,7 +82,7 @@ def activities(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET', 'DELETE'])
+@api_view(['GET', 'PUT', 'DELETE'])
 def activity(request, id):
 
     activity = get_object_or_404(Activities, id=id)
@@ -111,6 +111,26 @@ def activity(request, id):
         return Response({
             'message': '活动删除成功'
         }, status=status.HTTP_200_OK)
+    elif request.method == 'PUT':
+        serializer = ActivityTitleUpdateSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        data = serializer.validated_data
+        weixin_id = data['weixin_id']
+        creator_weixin_id = activity.creator_weixin_id
+        if weixin_id != creator_weixin_id:
+            return Response({
+                'error': '权限不足，只有活动创建者可以操作白名单'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        new_activity_title = data['activity_title']
+        activity.activity_title = new_activity_title
+        activity.save()
+
+        serializer = ActivitySerializer(activity)
+        return Response(serializer.data)
 
 
 @api_view(['PUT'])
