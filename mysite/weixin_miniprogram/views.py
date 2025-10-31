@@ -83,9 +83,9 @@ def activities(request):
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
-def activity(request, id):
+def activity(request, activity_id):
 
-    activity = get_object_or_404(Activities, id=id)
+    activity = get_object_or_404(Activities, id=activity_id)
 
     if request.method == 'GET':
         serializer = ActivitySerializer(activity)
@@ -134,9 +134,9 @@ def activity(request, id):
 
 
 @api_view(['PUT'])
-def activity_white_list(request, id):
+def activity_white_list(request, activity_id):
 
-    activity = get_object_or_404(Activities, id=id)
+    activity = get_object_or_404(Activities, id=activity_id)
     serializer = ActivityWhiteListUpdateSerializer(data=request.data)
 
     if not serializer.is_valid():
@@ -159,9 +159,9 @@ def activity_white_list(request, id):
 
 
 @api_view(['PUT'])
-def activity_items(request, id):
+def activity_items(request, activity_id, item_id):
 
-    activity = get_object_or_404(Activities, id=id)
+    activity = get_object_or_404(Activities, id=activity_id)
     serializer = ActivityItemsUpdateSerializer(data=request.data)
 
     if not serializer.is_valid():
@@ -176,7 +176,6 @@ def activity_items(request, id):
         }, status=status.HTTP_403_FORBIDDEN)
 
     # 检查活动事项是否存在
-    item_id = str(data['activity_item_id'])  # JSON键是字符串
     if item_id not in activity.activity_items:
         return Response({
             'error': f'活动事项ID {item_id} 不存在'

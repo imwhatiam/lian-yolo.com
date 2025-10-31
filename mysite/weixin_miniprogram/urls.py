@@ -22,7 +22,7 @@ urlpatterns = [
          name='checklist-search-api-view'),
 
     path('api/activities/', views.activities, name='activities'),
-    path('api/activities/<int:id>/', views.activity, name='activity'),
-    path('api/activities/<int:id>/white_list/', views.activity_white_list, name='activity_white_list'),
-    path('api/activities/<int:id>/items/', views.activity_items, name='activity_items'),
+    path('api/activities/<int:activity_id>/', views.activity, name='activity'),
+    path('api/activities/<int:activity_id>/white_list/', views.activity_white_list, name='activity_white_list'),
+    path('api/activities/<int:activity_id>/items/<int:item_id>/', views.activity_items, name='activity_items'),
 ]
