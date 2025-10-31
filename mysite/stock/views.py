@@ -52,6 +52,7 @@ def fupan(request):
 
         df = pd.DataFrame(data_list)
         df = df.iloc[::-1].reset_index(drop=True)  # reverse id
+        df['close_price'] = df['close_price'].replace(0, pd.NA).ffill()
         df['change_pct'] = (
             df.groupby('code')['close_price'].pct_change() * 100
         ).round(2)
