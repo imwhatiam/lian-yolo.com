@@ -14,18 +14,6 @@ from utils.admin_permission import PostAdminOnly, DeleteAdminOnly
 logger = logging.getLogger(__name__)
 
 
-def get_weixin_user_info_dict(openid):
-    try:
-        user_info = WeixinUserInfo.objects.get(openid=openid)
-        return {
-            "openid": user_info.openid,
-            "nickname": user_info.nickname,
-            "avatar_url": user_info.avatar_url,
-        }
-    except WeixinUserInfo.DoesNotExist:
-        return {}
-
-
 class JSCode2SessionView(APIView):
 
     def post(self, request, *args, **kwargs):
@@ -80,21 +68,16 @@ class JSCode2SessionView(APIView):
         nickname = request.data.get("nickname")
         avatar_url = request.data.get("avatar_url")
 
-        # get user info
-        if not nickname and not avatar_url:
-            data = get_weixin_user_info_dict(openid)
-            return Response({"data": data}, status=status.HTTP_200_OK)
+        user_info, _ = WeixinUserInfo.objects.get_or_create(openid=openid)
+        user_info.nickname = nickname
+        user_info.avatar_url = avatar_url
+        user_info.save()
 
-        # save user info
-        user_info = WeixinUserInfo.objects.create(
-            openid=openid,
-            nickname=nickname,
-            avatar_url=avatar_url
-        )
         data = {}
         data["openid"] = user_info.openid
         data["nickname"] = user_info.nickname
         data["avatar_url"] = user_info.avatar_url
+
         return Response({"data": data}, status=status.HTTP_200_OK)
 
 
