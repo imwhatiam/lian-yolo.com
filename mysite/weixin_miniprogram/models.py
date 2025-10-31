@@ -40,8 +40,6 @@ class Activities(models.Model):
 
     class Meta:
         db_table = 'activity'
-        verbose_name = '活动'
-        verbose_name_plural = '活动'
 
     def __str__(self):
         return f"{self.activity_title} (ID: {self.id})"
@@ -54,8 +52,6 @@ class WeixinUserInfo(models.Model):
 
     class Meta:
         db_table = 'weixin_user_info'
-        verbose_name = '微信用户信息'
-        verbose_name_plural = '微信用户信息'
 
     def __str__(self):
         return f'{self.nickname} ({self.openid})'

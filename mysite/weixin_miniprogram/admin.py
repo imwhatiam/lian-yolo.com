@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import CheckList, Activities
+from .models import CheckList, Activities, WeixinUserInfo
 
 
 @admin.register(CheckList)
@@ -41,3 +41,18 @@ class ActivityAdmin(admin.ModelAdmin):
     list_per_page = 20
 
     ordering = ('-id',)
+
+
+@admin.register(WeixinUserInfo)
+class WeixinUserInfoAdmin(admin.ModelAdmin):
+
+    list_display = ('openid', 'nickname', 'avatar')
+    search_fields = ('nickname',)
+
+    def avatar(self, obj):
+        if obj.avatar_url:
+            return format_html(
+                '<img src="{}" style="max-height: 30px; max-width: 30px;" />',
+                obj.avatar_url
+            )
+        return "-"
