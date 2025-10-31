@@ -75,8 +75,6 @@ def activities(request):
                     "operator": ""
                 }
 
-            data['white_list'] = [data['creator_weixin_id']] + data['white_list']
-
             activity = Activities.objects.create(**data)
             serializer = ActivitySerializer(activity)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
