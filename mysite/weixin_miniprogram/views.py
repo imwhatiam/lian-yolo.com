@@ -69,7 +69,7 @@ def activities(request):
             # }
             data['activity_items'] = {}
             for index, item_name in enumerate(activity_item_list):
-                data['activity_items'][str(index + 1)] = {
+                data['activity_items'][int(index + 1)] = {
                     "name": item_name,
                     "status": "",
                     "operator": ""
