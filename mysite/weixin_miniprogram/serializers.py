@@ -55,3 +55,7 @@ class ActivityItemsUpdateSerializer(serializers.Serializer):
     activity_item_status = serializers.ChoiceField(
         choices=['completed', 'deleted', '']
     )
+
+
+class ActivityItemsDeleteSerializer(serializers.Serializer):
+    weixin_id = serializers.CharField(max_length=255)

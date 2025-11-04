@@ -9,7 +9,7 @@ from .models import CheckList, Activities
 
 from .serializers import ActivityCreateSerializer, ActivityDeleteSerializer, \
         ActivityWhiteListUpdateSerializer, ActivityItemsUpdateSerializer, \
-        ActivitySerializer, ActivityTitleUpdateSerializer
+        ActivitySerializer, ActivityTitleUpdateSerializer, ActivityItemsDeleteSerializer
 
 
 def checklist_tree(request):
@@ -158,45 +158,61 @@ def activity_white_list(request, activity_id):
     return Response(serializer.data)
 
 
-@api_view(['PUT'])
+@api_view(['PUT', 'DELETE'])
 def activity_items(request, activity_id, item_id):
 
     activity = get_object_or_404(Activities, id=activity_id)
-    serializer = ActivityItemsUpdateSerializer(data=request.data)
+    if request.method == 'DELETE':
+        serializer = ActivityItemsDeleteSerializer(data=request.data)
 
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    data = serializer.validated_data
+        data = serializer.validated_data
+        if data['weixin_id'] not in activity.white_list:
+            return Response({
+                'error': '权限不足，操作者不在白名单中'
+            }, status=status.HTTP_403_FORBIDDEN)
 
-    # 权限验证：操作者必须在白名单中
-    if data['weixin_id'] not in activity.white_list:
-        return Response({
-            'error': '权限不足，操作者不在白名单中'
-        }, status=status.HTTP_403_FORBIDDEN)
+        if item_id not in activity.activity_items:
+            return Response({
+                'error': f'活动事项ID {item_id} 不存在'
+            }, status=status.HTTP_404_NOT_FOUND)
 
-    # 检查活动事项是否存在
-    if item_id not in activity.activity_items:
-        return Response({
-            'error': f'活动事项ID {item_id} 不存在'
-        }, status=status.HTTP_404_NOT_FOUND)
+        activity.activity_items.pop(item_id)
 
-    current_item = activity.activity_items[item_id]
+    if request.method == 'PUT':
 
-    # 检查是否可以操作：status为空或operator与当前operator一致
-    if (current_item.get('status', '') != '' and current_item.get('operator', '') != data['weixin_id']):
-        return Response({
-            'error': '无法操作，该活动事项已被其他人操作'
-        }, status=status.HTTP_400_BAD_REQUEST)
+        serializer = ActivityItemsUpdateSerializer(data=request.data)
 
-    # 更新活动事项
-    if data['activity_item_status'] == '':
-        # 重置状态和操作者
-        activity.activity_items[item_id]['status'] = ''
-        activity.activity_items[item_id]['operator'] = ''
-    else:
-        activity.activity_items[item_id]['status'] = data['activity_item_status']
-        activity.activity_items[item_id]['operator'] = data['weixin_id']
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        data = serializer.validated_data
+        if data['weixin_id'] not in activity.white_list:
+            return Response({
+                'error': '权限不足，操作者不在白名单中'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        if item_id not in activity.activity_items:
+            return Response({
+                'error': f'活动事项ID {item_id} 不存在'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        current_item = activity.activity_items[item_id]
+
+        # check if can be updated, status is empty or operator is the same
+        if (current_item.get('status', '') != '' and current_item.get('operator', '') != data['weixin_id']):
+            return Response({
+                'error': '无法操作，该活动事项已被其他人操作'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if data['activity_item_status'] == '':
+            activity.activity_items[item_id]['status'] = ''
+            activity.activity_items[item_id]['operator'] = ''
+        else:
+            activity.activity_items[item_id]['status'] = data['activity_item_status']
+            activity.activity_items[item_id]['operator'] = data['weixin_id']
 
     activity.save()
     serializer = ActivitySerializer(activity)
