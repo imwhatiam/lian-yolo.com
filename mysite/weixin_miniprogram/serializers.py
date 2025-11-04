@@ -50,12 +50,17 @@ class ActivityWhiteListUpdateSerializer(serializers.Serializer):
     )
 
 
-class ActivityItemsUpdateSerializer(serializers.Serializer):
+class ActivityItemsAddSerializer(serializers.Serializer):
+    weixin_id = serializers.CharField(max_length=255)
+    activity_item_name = serializers.JSONField()
+
+
+class ActivityItemUpdateSerializer(serializers.Serializer):
     weixin_id = serializers.CharField(max_length=255)
     activity_item_status = serializers.ChoiceField(
         choices=['completed', 'deleted', '']
     )
 
 
-class ActivityItemsDeleteSerializer(serializers.Serializer):
+class ActivityItemDeleteSerializer(serializers.Serializer):
     weixin_id = serializers.CharField(max_length=255)

@@ -8,8 +8,9 @@ from django.db.models import Q
 from .models import CheckList, Activities
 
 from .serializers import ActivityCreateSerializer, ActivityDeleteSerializer, \
-        ActivityWhiteListUpdateSerializer, ActivityItemsUpdateSerializer, \
-        ActivitySerializer, ActivityTitleUpdateSerializer, ActivityItemsDeleteSerializer
+        ActivityWhiteListUpdateSerializer, ActivityItemUpdateSerializer, \
+        ActivitySerializer, ActivityTitleUpdateSerializer, \
+        ActivityItemDeleteSerializer, ActivityItemsAddSerializer
 
 
 def checklist_tree(request):
@@ -158,12 +159,43 @@ def activity_white_list(request, activity_id):
     return Response(serializer.data)
 
 
+@api_view(['POST'])
+def activity_items(request, activity_id):
+
+    activity = get_object_or_404(Activities, id=activity_id)
+    serializer = ActivityItemsAddSerializer(data=request.data)
+
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    data = serializer.validated_data
+    weixin_id = data['weixin_id']
+    if weixin_id not in activity.white_list:
+        return Response({
+            'error': '权限不足，操作者不在白名单中'
+        }, status=status.HTTP_403_FORBIDDEN)
+
+    item_name = data['activity_item_name']
+
+    # find the largest number key
+    max_key = max(int(k) for k in activity.activity_items.keys())
+    next_key = str(max_key + 1)
+    activity.activity_items[next_key] = {
+        "name": item_name,
+        "status": "",
+        "operator": ""
+    }
+    activity.save()
+    serializer = ActivitySerializer(activity)
+    return Response(serializer.data)
+
+
 @api_view(['PUT', 'DELETE'])
-def activity_items(request, activity_id, item_id):
+def activity_item(request, activity_id, item_id):
 
     activity = get_object_or_404(Activities, id=activity_id)
     if request.method == 'DELETE':
-        serializer = ActivityItemsDeleteSerializer(data=request.data)
+        serializer = ActivityItemDeleteSerializer(data=request.data)
 
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -183,7 +215,7 @@ def activity_items(request, activity_id, item_id):
 
     if request.method == 'PUT':
 
-        serializer = ActivityItemsUpdateSerializer(data=request.data)
+        serializer = ActivityItemUpdateSerializer(data=request.data)
 
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
