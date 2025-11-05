@@ -242,12 +242,23 @@ def serialize_activity(activity):
     """
     统一序列化活动对象
     """
+
+    items_with_avatar = {}
+    activity_items = activity.activity_items
+    for key, item in activity_items.items():
+        if item['status'] != '':
+            item['operator_avatar'] = WeixinUserInfo.objects.get_avatar_url(item['operator'])
+        else:
+            item['operator_avatar'] = ''
+
+        items_with_avatar[key] = item
+
     return {
         'id': activity.id,
         'creator_weixin_id': activity.creator_weixin_id,
         'creator_weixin_name': activity.creator_weixin_name,
         'activity_title': activity.activity_title,
-        'activity_items': activity.activity_items,
+        'activity_items': items_with_avatar,
         'white_list': activity.white_list
     }
 
