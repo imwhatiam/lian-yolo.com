@@ -1,6 +1,14 @@
 from django.urls import path
-from .api_views import JSCode2SessionView, \
-        CheckListView, CheckListSearchView
+from .api_views import (
+    JSCode2SessionView,
+    CheckListView,
+    CheckListSearchView,
+    ActivitiesView,
+    ActivityView,
+    ActivityWhiteListView,
+    ActivityItemsView,
+    ActivityItemView
+)
 from . import views
 
 urlpatterns = [
@@ -21,9 +29,10 @@ urlpatterns = [
          CheckListSearchView.as_view(),
          name='checklist-search-api-view'),
 
-    path('api/activities/', views.activities, name='activities'),
-    path('api/activities/<int:activity_id>/', views.activity, name='activity'),
-    path('api/activities/<int:activity_id>/white_list/', views.activity_white_list, name='activity_white_list'),
-    path('api/activities/<int:activity_id>/items/', views.activity_items, name='activity_items'),
-    path('api/activities/<int:activity_id>/items/<str:item_id>/', views.activity_item, name='activity_item'),
+    # 使用新的 APIView 类
+    path('api/activities/', ActivitiesView.as_view(), name='activities'),
+    path('api/activities/<int:activity_id>/', ActivityView.as_view(), name='activity'),
+    path('api/activities/<int:activity_id>/white_list/', ActivityWhiteListView.as_view(), name='activity_white_list'),
+    path('api/activities/<int:activity_id>/items/', ActivityItemsView.as_view(), name='activity_items'),
+    path('api/activities/<int:activity_id>/items/<str:item_id>/', ActivityItemView.as_view(), name='activity_item'),
 ]

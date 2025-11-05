@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CheckList, Activities
+from .models import CheckList
 
 
 class CheckListSerializer(serializers.ModelSerializer):
@@ -19,48 +19,3 @@ class CheckListSerializer(serializers.ModelSerializer):
             return []
         children = obj.get_children().order_by('order_num')
         return CheckListSerializer(children, many=True, depth=self.depth + 1).data
-
-
-class ActivityCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Activities
-        fields = ['creator_weixin_id', 'creator_weixin_name',
-                  'activity_title', 'activity_items', 'white_list']
-
-
-class ActivitySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Activities
-        fields = '__all__'
-
-
-class ActivityDeleteSerializer(serializers.Serializer):
-    weixin_id = serializers.CharField(max_length=255)
-
-
-class ActivityTitleUpdateSerializer(serializers.Serializer):
-    weixin_id = serializers.CharField(max_length=255)
-    activity_title = serializers.CharField(max_length=255)
-
-
-class ActivityWhiteListUpdateSerializer(serializers.Serializer):
-    weixin_id = serializers.CharField(max_length=255)
-    white_list = serializers.ListField(
-        child=serializers.CharField(max_length=255)
-    )
-
-
-class ActivityItemsAddSerializer(serializers.Serializer):
-    weixin_id = serializers.CharField(max_length=255)
-    activity_item_name = serializers.JSONField()
-
-
-class ActivityItemUpdateSerializer(serializers.Serializer):
-    weixin_id = serializers.CharField(max_length=255)
-    activity_item_status = serializers.ChoiceField(
-        choices=['completed', 'deleted', '']
-    )
-
-
-class ActivityItemDeleteSerializer(serializers.Serializer):
-    weixin_id = serializers.CharField(max_length=255)
