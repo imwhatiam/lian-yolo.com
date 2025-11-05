@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 
 from django.db import connection
+from django.core.cache import cache
 
 from .models import CheckList, WeixinUserInfo, Activities
 from .serializers import CheckListSerializer
@@ -239,15 +240,22 @@ def require_activity_exists(view_func):
 
 
 def serialize_activity(activity):
-    """
-    统一序列化活动对象
-    """
-
     items_with_avatar = {}
     activity_items = activity.activity_items
+
     for key, item in activity_items.items():
-        if item['status'] != '':
-            item['operator_avatar'] = WeixinUserInfo.objects.get_avatar_url(item['operator'])
+
+        operator = item.get('operator', '')
+        if item['status'] != '' and operator:
+
+            cache_key = f"user_avatar_{operator}"
+            operator_avatar = cache.get(cache_key)
+
+            if operator_avatar is None:
+                operator_avatar = WeixinUserInfo.objects.get_avatar_url(item['operator'])
+                cache.set(cache_key, operator_avatar)
+
+            item['operator_avatar'] = operator_avatar
         else:
             item['operator_avatar'] = ''
 
