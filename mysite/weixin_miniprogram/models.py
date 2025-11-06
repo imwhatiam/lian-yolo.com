@@ -1,3 +1,5 @@
+import os
+import uuid
 import time
 from django.db import models
 from django.core.serializers.json import DjangoJSONEncoder
@@ -54,10 +56,24 @@ class WeixinUserInfoManager(models.Manager):
             return ''
 
 
+def user_avatar_path(instance, filename):
+    ext = filename.split('.')[-1]
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    return os.path.join('avatars', 'weixin', instance.openid, filename)
+
+
 class WeixinUserInfo(models.Model):
     openid = models.CharField(db_index=True, max_length=100, unique=True)
     nickname = models.CharField(blank=True, max_length=100, null=True)
     avatar_url = models.URLField(blank=True, max_length=500, null=True)
+    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    avatar = models.ImageField(
+        upload_to=user_avatar_path,
+        blank=True,
+        null=True,
+        max_length=500,
+        verbose_name='头像文件'
+    )
 
     objects = WeixinUserInfoManager()
 

@@ -6,6 +6,7 @@ from functools import wraps
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 
 from django.db import connection
@@ -19,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 class JSCode2SessionView(APIView):
+
+    parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request, *args, **kwargs):
 
@@ -69,18 +72,24 @@ class JSCode2SessionView(APIView):
             return Response({"error": error_msg},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        nickname = request.data.get("nickname")
-        avatar_url = request.data.get("avatar_url")
+        nickname = request.data.get("nickname", "")
+        avatar_url = request.data.get("avatar_url", "")
 
+        avatar_file = request.FILES.get('avatar')
         user_info, _ = WeixinUserInfo.objects.get_or_create(openid=openid)
+
+        if user_info.avatar:
+            user_info.avatar.delete(save=False)
+
         user_info.nickname = nickname
         user_info.avatar_url = avatar_url
+        user_info.avatar = avatar_file
         user_info.save()
 
         data = {}
         data["openid"] = user_info.openid
         data["nickname"] = user_info.nickname
-        data["avatar_url"] = user_info.avatar_url
+        data["avatar_url"] = request.build_absolute_uri(user_info.avatar.url)
 
         return Response({"data": data}, status=status.HTTP_200_OK)
 
