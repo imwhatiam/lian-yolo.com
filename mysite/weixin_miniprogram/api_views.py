@@ -72,26 +72,25 @@ class JSCode2SessionView(APIView):
             return Response({"error": error_msg},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        openid = 'lian-weixin-id'
         nickname = request.data.get("nickname", "")
-        avatar_url = request.data.get("avatar_url", "")
 
         avatar_file = request.FILES.get('avatar')
-        user_info, _ = WeixinUserInfo.objects.get_or_create(openid=openid)
+        user_info, _ = WeixinUserInfo.objects.get_or_create(weixin_id=openid)
 
         if user_info.avatar:
             user_info.avatar.delete(save=False)
 
         user_info.nickname = nickname
-        user_info.avatar_url = avatar_url
         user_info.avatar = avatar_file
         user_info.save()
 
         data = {}
-        data["openid"] = user_info.openid
+        data["weixin_id"] = user_info.weixin_id
         data["nickname"] = user_info.nickname
         data["avatar_url"] = request.build_absolute_uri(user_info.avatar.url)
 
-        return Response({"data": data}, status=status.HTTP_200_OK)
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class CheckListView(APIView):
@@ -248,35 +247,47 @@ def require_activity_exists(view_func):
     return wrapper
 
 
-def serialize_activity(activity):
-    items_with_avatar = {}
-    activity_items = activity.activity_items
+def get_avatar_url(request, weixin_id):
+    cache_key = f"avatar_url_{weixin_id}"
+    avatar_url = cache.get(cache_key)
 
-    for key, item in activity_items.items():
+    if not avatar_url:
+        try:
+            user_info = WeixinUserInfo.objects.get(weixin_id=weixin_id)
+            avatar_url = request.build_absolute_uri(user_info.avatar.url)
+            cache.set(cache_key, avatar_url)
+        except WeixinUserInfo.DoesNotExist:
+            avatar_url = ''
+
+    return avatar_url
+
+
+def serialize_activity(request, activity):
+
+    items_with_avatar_url = {}
+    for key, item in activity.activity_items.items():
 
         operator = item.get('operator', '')
         if item['status'] != '' and operator:
-
-            cache_key = f"user_avatar_{operator}"
-            operator_avatar = cache.get(cache_key)
-
-            if operator_avatar is None:
-                operator_avatar = WeixinUserInfo.objects.get_avatar_url(item['operator'])
-                cache.set(cache_key, operator_avatar)
-
-            item['operator_avatar'] = operator_avatar
+            item['operator_avatar_url'] = get_avatar_url(request, operator)
         else:
-            item['operator_avatar'] = ''
+            item['operator_avatar_url'] = ''
 
-        items_with_avatar[key] = item
+        items_with_avatar_url[key] = item
+
+    white_list_with_avatar_url = []
+    for item in activity.white_list:
+        avatar_url = get_avatar_url(request, item.get('weixin_id', ''))
+        item['avatar_url'] = avatar_url
+        white_list_with_avatar_url.append(item)
 
     return {
         'id': activity.id,
         'creator_weixin_id': activity.creator_weixin_id,
         'creator_weixin_name': activity.creator_weixin_name,
         'activity_title': activity.activity_title,
-        'activity_items': items_with_avatar,
-        'white_list': activity.white_list
+        'activity_items': items_with_avatar_url,
+        'white_list': white_list_with_avatar_url
     }
 
 
@@ -303,10 +314,9 @@ class ActivitiesView(APIView):
         # 手动序列化数据
         serialized_data = []
         for activity in accessible_activities:
-            serialized_data.append(serialize_activity(activity))
+            serialized_data.append(serialize_activity(request, activity))
 
         return Response({
-            'weixin_id': weixin_id,
             'count': len(accessible_activities),
             'data': serialized_data
         })
@@ -339,10 +349,14 @@ class ActivitiesView(APIView):
                 "operator": ""
             }
 
-        white_list = data.get('white_list', [])
-        white_list.append(data.get('creator_weixin_id'))
-        white_list = list(set(white_list))
-        white_list = {weixin_id: "confirmed" for weixin_id in white_list}
+        creator_weixin_id = data['creator_weixin_id']
+        white_list = [
+            {
+                'weixin_id': creator_weixin_id,
+                'avatar_url': get_avatar_url(request, creator_weixin_id),
+                'permission': 'creator'
+            }
+        ]
 
         # 创建活动
         activity = Activities.objects.create(
@@ -353,7 +367,7 @@ class ActivitiesView(APIView):
             white_list=white_list
         )
 
-        return Response(serialize_activity(activity), status=status.HTTP_201_CREATED)
+        return Response(serialize_activity(request, activity))
 
 
 class ActivityView(APIView):
@@ -376,12 +390,16 @@ class ActivityView(APIView):
         # add new visitor to white list
         white_list = activity.white_list
         if weixin_id not in white_list:
-            white_list[weixin_id] = ""
+            white_list.append({
+                'weixin_id': weixin_id,
+                'avatar_url': get_avatar_url(request, weixin_id),
+                'permission': ''
+            })
 
         activity.white_list = white_list
         activity.save()
 
-        return Response(serialize_activity(activity))
+        return Response(serialize_activity(request, activity))
 
     @require_activity_exists
     def put(self, request, activity):
@@ -410,7 +428,7 @@ class ActivityView(APIView):
         activity.activity_title = new_title
         activity.save()
 
-        return Response(serialize_activity(activity))
+        return Response(serialize_activity(request, activity))
 
     @require_activity_exists
     def delete(self, request, activity):
@@ -448,22 +466,27 @@ class ActivityWhiteListView(APIView):
 
         data = request.data
         weixin_id = data.get('weixin_id')
-        white_list = data.get('white_list')
+        white_list_dict = data.get('white_list')
 
         if not weixin_id:
             return Response({
                 'error': 'weixin_id 是必需的'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        if white_list is None:
+        if white_list_dict is None:
             return Response({
                 'error': 'white_list 是必需的'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # {'weixin_id': 'confirmed'} or {'weixin_id': ''}
-        if not isinstance(white_list, dict):
+        if not isinstance(white_list_dict, dict):
             return Response({
                 'error': 'white_list 必须是 dict 类型'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        permission = white_list_dict['permission']
+        if permission not in ('admin', ''):
+            return Response({
+                'error': 'white_list 中的 permission 必须是 "admin" 或 ""'
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # 权限验证：只有创建者可以操作白名单
@@ -472,25 +495,22 @@ class ActivityWhiteListView(APIView):
                 'error': '权限不足，只有活动创建者可以操作白名单'
             }, status=status.HTTP_403_FORBIDDEN)
 
-        existing_white_list = activity.white_list
-        for visitor, visitor_status in white_list.items():
+        white_list_exists = False
+        new_white_list = []
+        for dict_item in activity.white_list:
+            if dict_item['weixin_id'] == white_list_dict['weixin_id']:
+                white_list_exists = True
+                dict_item.update(white_list_dict)
 
-            if visitor not in existing_white_list:
-                return Response({
-                    'error': 'white_list 中的 weixin_id 必须是活动白名单中的'
-                }, status=status.HTTP_400_BAD_REQUEST)
+            new_white_list.append(dict_item)
 
-            if visitor_status not in ('confirmed', ''):
-                return Response({
-                    'error': 'white_list 中的 status 必须是 "confirmed" 或 ""'
-                }, status=status.HTTP_400_BAD_REQUEST)
+        if not white_list_exists:
+            new_white_list.append(white_list_dict)
 
-            existing_white_list[visitor] = visitor_status
-
-        activity.white_list = existing_white_list
+        activity.white_list = new_white_list
         activity.save()
 
-        return Response(serialize_activity(activity))
+        return Response(serialize_activity(request, activity))
 
 
 class ActivityItemsView(APIView):
@@ -516,10 +536,10 @@ class ActivityItemsView(APIView):
                 'error': 'activity_item_name 是必需的'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # 权限验证：操作者必须在白名单中
-        if weixin_id not in activity.white_list:
+        # 权限验证：只有创建者可以更新活动标题
+        if weixin_id != activity.creator_weixin_id:
             return Response({
-                'error': '权限不足，操作者不在白名单中'
+                'error': '权限不足，只有活动创建者可以新增活动事项'
             }, status=status.HTTP_403_FORBIDDEN)
 
         # 找到最大的键值并生成下一个键
@@ -538,7 +558,7 @@ class ActivityItemsView(APIView):
         }
         activity.save()
 
-        return Response(serialize_activity(activity))
+        return Response(serialize_activity(request, activity))
 
 
 class ActivityItemView(APIView):
@@ -571,7 +591,7 @@ class ActivityItemView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # 权限验证：操作者必须在白名单中
-        if weixin_id not in activity.white_list:
+        if weixin_id not in [item['weixin_id'] for item in activity.white_list]:
             return Response({
                 'error': '权限不足，操作者不在白名单中'
             }, status=status.HTTP_403_FORBIDDEN)
@@ -601,7 +621,7 @@ class ActivityItemView(APIView):
 
         activity.save()
 
-        return Response(serialize_activity(activity))
+        return Response(serialize_activity(request, activity))
 
     @require_activity_exists
     def delete(self, request, activity, item_id):
@@ -615,7 +635,7 @@ class ActivityItemView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # 权限验证：操作者必须在白名单中
-        if weixin_id not in activity.creator_weixin_id:
+        if weixin_id != activity.creator_weixin_id:
             return Response({
                 'error': '权限不足，只有活动创建者可以删除活动事项'
             }, status=status.HTTP_403_FORBIDDEN)
@@ -630,4 +650,4 @@ class ActivityItemView(APIView):
         activity.activity_items.pop(item_id)
         activity.save()
 
-        return Response(serialize_activity(activity))
+        return Response(serialize_activity(request, activity))

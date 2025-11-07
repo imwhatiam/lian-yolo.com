@@ -45,14 +45,18 @@ class ActivityAdmin(admin.ModelAdmin):
 
 @admin.register(WeixinUserInfo)
 class WeixinUserInfoAdmin(admin.ModelAdmin):
+    list_display = ['weixin_id', 'nickname', 'avatar_image']
+    search_fields = ['weixin_id', 'nickname']
+    readonly_fields = ['avatar_preview']
 
-    list_display = ('openid', 'nickname', 'avatar')
-    search_fields = ('nickname',)
+    def avatar_image(self, obj):
+        if obj.avatar:
+            return format_html('<img src="{}" width="50" height="50" style="border-radius: 50%;" />', obj.avatar.url)
+        return "无头像"
+    avatar_image.short_description = '头像'
 
-    def avatar(self, obj):
-        if obj.avatar_url:
-            return format_html(
-                '<img src="{}" style="max-height: 30px; max-width: 30px;" />',
-                obj.avatar_url
-            )
-        return "-"
+    def avatar_preview(self, obj):
+        if obj.avatar:
+            return format_html('<img src="{}" width="150" height="150" style="border-radius: 50%;" />', obj.avatar.url)
+        return "无头像"
+    avatar_preview.short_description = '头像预览'
