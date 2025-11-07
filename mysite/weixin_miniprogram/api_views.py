@@ -387,15 +387,14 @@ class ActivityView(APIView):
 
         # add new visitor to white list
         white_list = activity.white_list
-        if weixin_id not in white_list:
+        if weixin_id not in [item['weixin_id'] for item in white_list]:
             white_list.append({
                 'weixin_id': weixin_id,
                 'avatar_url': get_avatar_url(request, weixin_id),
                 'permission': ''
             })
-
-        activity.white_list = white_list
-        activity.save()
+            activity.white_list = white_list
+            activity.save()
 
         return Response(serialize_activity(request, activity))
 
