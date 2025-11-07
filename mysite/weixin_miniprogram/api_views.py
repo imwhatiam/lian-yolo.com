@@ -360,7 +360,6 @@ class ActivitiesView(APIView):
         # 创建活动
         activity = Activities.objects.create(
             creator_weixin_id=data['creator_weixin_id'],
-            creator_weixin_name=data['creator_weixin_name'],
             activity_title=data['activity_title'],
             activity_items=processed_activity_items,
             white_list=white_list
