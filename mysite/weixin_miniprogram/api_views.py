@@ -90,7 +90,7 @@ class JSCode2SessionView(APIView):
         data["nickname"] = user_info.nickname
         data["avatar_url"] = request.build_absolute_uri(user_info.avatar.url)
 
-        return Response(data, status=status.HTTP_200_OK)
+        return Response(data)
 
 
 class CheckListView(APIView):
@@ -326,8 +326,7 @@ class ActivitiesView(APIView):
         data = request.data
 
         # 手动验证必需字段
-        required_fields = ['creator_weixin_id', 'creator_weixin_name',
-                           'activity_title', 'activity_items']
+        required_fields = ['creator_weixin_id', 'activity_title', 'activity_items']
         for field in required_fields:
             if field not in data:
                 return Response({
