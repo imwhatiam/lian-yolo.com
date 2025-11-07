@@ -72,7 +72,6 @@ class JSCode2SessionView(APIView):
             return Response({"error": error_msg},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        openid = 'lian-weixin-id'
         nickname = request.data.get("nickname", "")
 
         avatar_file = request.FILES.get('avatar')
