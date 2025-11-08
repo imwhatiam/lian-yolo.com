@@ -602,7 +602,7 @@ class ActivityItemView(APIView):
 
         # 检查是否可以更新：状态为空或操作者是同一个人
         if (current_item.get('status', '') != '' and
-                current_item.get('operator', '') != weixin_id):
+                weixin_id not in [current_item.get('operator', ''), activity.creator_weixin_id]):
             return Response({
                 'error': '无法操作，该活动事项已被其他人操作'
             }, status=status.HTTP_400_BAD_REQUEST)
