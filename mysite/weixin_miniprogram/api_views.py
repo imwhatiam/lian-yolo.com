@@ -307,19 +307,25 @@ class ActivitiesView(APIView):
                 'error': '参数 weixin_id 不能为空'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        if connection.vendor == 'sqlite':
-            accessible_activities = Activities.objects.filter(white_list__icontains=weixin_id)
-        else:
-            accessible_activities = Activities.objects.filter(white_list__contains=[weixin_id])
+        # get my activities
+        my_activities = []
+        for activity in Activities.objects.filter(creator_weixin_id=weixin_id):
+            my_activities.append(serialize_activity(request, activity))
 
-        # 手动序列化数据
-        serialized_data = []
-        for activity in accessible_activities:
-            serialized_data.append(serialize_activity(request, activity))
+        # get shared activities
+        activities = Activities.objects.exclude(creator_weixin_id=weixin_id)
+        if connection.vendor == 'sqlite':
+            activities = activities.filter(white_list__icontains=weixin_id)
+        else:
+            activities = activities.filter(white_list__contains=[weixin_id])
+
+        shared_activities = []
+        for activity in activities:
+            shared_activities.append(serialize_activity(request, activity))
 
         return Response({
-            'count': len(accessible_activities),
-            'data': serialized_data
+            'my': my_activities,
+            'shared': shared_activities,
         })
 
     def post(self, request):
@@ -433,20 +439,44 @@ class ActivityView(APIView):
 
         data = request.data
         weixin_id = data.get('weixin_id')
+        source = data.get('source')
 
         if not weixin_id:
             return Response({
                 'error': 'weixin_id 是必需的'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # 权限验证：只有创建者可以删除活动
-        if weixin_id != activity.creator_weixin_id:
+        if not source:
             return Response({
-                'error': '权限不足，只有活动创建者可以删除活动'
-            }, status=status.HTTP_403_FORBIDDEN)
+                'error': 'source 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        # 删除活动
-        activity.delete()
+        if source not in ['my', 'shared']:
+            return Response({
+                'error': 'source 必须是 "my" 或 "shared"'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if source == 'my':
+            if weixin_id != activity.creator_weixin_id:
+                return Response({
+                    'error': '权限不足，只有活动创建者可以删除自己的活动'
+                }, status=status.HTTP_403_FORBIDDEN)
+            else:
+                activity.delete()
+
+        if source == 'shared':
+            shared_weixin_id_list = [item['weixin_id'] for item in activity.white_list]
+            if weixin_id not in shared_weixin_id_list:
+                return Response({
+                    'error': '权限不足，只有活动白名单中的成员可以删除共享的活动'
+                }, status=status.HTTP_403_FORBIDDEN)
+            else:
+                new_white_list = []
+                for dict_item in activity.white_list:
+                    if dict_item['weixin_id'] != weixin_id:
+                        new_white_list.append(dict_item)
+                activity.white_list = new_white_list
+                activity.save()
 
         return Response({
             'message': '活动删除成功'
