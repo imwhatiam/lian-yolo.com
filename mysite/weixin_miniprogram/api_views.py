@@ -274,6 +274,8 @@ def serialize_activity(request, activity):
 
         items_with_avatar_url[key] = item
 
+    sorted_items = dict(sorted(items_with_avatar_url.items(), key=lambda x: int(x[0])))
+
     white_list_with_avatar_url = []
     for item in activity.white_list:
         avatar_url = get_avatar_url(request, item.get('weixin_id', ''))
@@ -285,7 +287,7 @@ def serialize_activity(request, activity):
         'creator_weixin_id': activity.creator_weixin_id,
         'creator_weixin_name': activity.creator_weixin_name,
         'activity_title': activity.activity_title,
-        'activity_items': items_with_avatar_url,
+        'activity_items': sorted_items,
         'white_list': white_list_with_avatar_url
     }
 
@@ -552,6 +554,38 @@ class ActivityItemsView(APIView):
             "status": "",
             "operator": ""
         }
+        activity.save()
+
+        return Response(serialize_activity(request, activity))
+
+
+class ActivityItemsInitView(APIView):
+
+    @require_activity_exists
+    def put(self, request, activity):
+
+        data = request.data
+        weixin_id = data.get('weixin_id')
+
+        if not weixin_id:
+            return Response({
+                'error': 'weixin_id 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if weixin_id != activity.creator_weixin_id:
+            return Response({
+                'error': '权限不足，只有活动创建者可以初始化活动事项'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        new_items = {}
+        for key, item in activity.activity_items.items():
+            new_items[key] = {
+                "name": item['name'],
+                "status": "",
+                "operator": ""
+            }
+
+        activity.activity_items = new_items
         activity.save()
 
         return Response(serialize_activity(request, activity))

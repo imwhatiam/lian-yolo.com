@@ -7,6 +7,7 @@ from .api_views import (
     ActivityView,
     ActivityWhiteListView,
     ActivityItemsView,
+    ActivityItemsInitView,
     ActivityItemView
 )
 from . import views
@@ -34,5 +35,6 @@ urlpatterns = [
     path('api/activities/<int:activity_id>/', ActivityView.as_view(), name='activity'),
     path('api/activities/<int:activity_id>/white_list/', ActivityWhiteListView.as_view(), name='activity_white_list'),
     path('api/activities/<int:activity_id>/items/', ActivityItemsView.as_view(), name='activity_items'),
+    path('api/activities/<int:activity_id>/init-items/', ActivityItemsInitView.as_view(), name='activity_items_init'),
     path('api/activities/<int:activity_id>/items/<str:item_id>/', ActivityItemView.as_view(), name='activity_item'),
 ]
