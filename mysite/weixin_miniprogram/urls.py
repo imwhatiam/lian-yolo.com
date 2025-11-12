@@ -5,6 +5,7 @@ from .api_views import (
     CheckListSearchView,
     ActivitiesView,
     ActivityView,
+    ActivityCopyToMyView,
     ActivityWhiteListView,
     ActivityItemsView,
     ActivityItemsInitView,
@@ -33,6 +34,7 @@ urlpatterns = [
     # 使用新的 APIView 类
     path('api/activities/', ActivitiesView.as_view(), name='activities'),
     path('api/activities/<int:activity_id>/', ActivityView.as_view(), name='activity'),
+    path('api/activities/<int:activity_id>/copy-to-my/', ActivityCopyToMyView.as_view(), name='activity-copy-to-my'),
     path('api/activities/<int:activity_id>/white_list/', ActivityWhiteListView.as_view(), name='activity_white_list'),
     path('api/activities/<int:activity_id>/items/', ActivityItemsView.as_view(), name='activity_items'),
     path('api/activities/<int:activity_id>/init-items/', ActivityItemsInitView.as_view(), name='activity_items_init'),

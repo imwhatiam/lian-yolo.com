@@ -483,6 +483,68 @@ class ActivityView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+class ActivityCopyToMyView(APIView):
+
+    @require_activity_exists
+    def post(self, request, old_activity):
+
+        data = request.data
+        weixin_id = data.get('weixin_id')
+
+        if not weixin_id:
+            return Response({
+                'error': 'weixin_id 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # create new activity
+        old_activity_item_list = [item['name'] for key, item in
+                                  old_activity.activity_items.items()]
+        processed_activity_items = {}
+        for index, item_name in enumerate(old_activity_item_list):
+            processed_activity_items[str(index + 1)] = {
+                "name": item_name,
+                "status": "",
+                "operator": ""
+            }
+
+        white_list = [
+            {
+                'weixin_id': weixin_id,
+                'avatar_url': get_avatar_url(request, weixin_id),
+                'permission': 'creator'
+            }
+        ]
+
+        # 创建活动
+        activity = Activities.objects.create(
+            creator_weixin_id=weixin_id,
+            activity_title=old_activity.activity_title,
+            activity_items=processed_activity_items,
+            white_list=white_list
+        )
+
+        # get my activities
+        my_activities = []
+        for activity in Activities.objects.filter(creator_weixin_id=weixin_id):
+            my_activities.append(serialize_activity(request, activity))
+
+        # get shared activities
+        activities = Activities.objects.exclude(creator_weixin_id=weixin_id)
+        if connection.vendor == 'sqlite':
+            activities = activities.filter(white_list__icontains=weixin_id)
+        else:
+            activities = activities.filter(white_list__contains=[weixin_id])
+
+        shared_activities = []
+        for activity in activities:
+            shared_activities.append(serialize_activity(request, activity))
+
+        return Response({
+            'my': my_activities,
+            'shared': shared_activities,
+        })
+
+
 class ActivityWhiteListView(APIView):
     """
     处理活动白名单的更新

@@ -39,6 +39,7 @@ class Activities(models.Model):
     activity_title = models.CharField(max_length=255)
     activity_items = models.JSONField(encoder=DjangoJSONEncoder)
     white_list = models.JSONField(encoder=DjangoJSONEncoder, default=list)
+    last_modified = models.IntegerField(default=current_timestamp)
 
     class Meta:
         db_table = 'activity'

@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.contrib import admin
 from django.utils.html import format_html
 
@@ -28,11 +29,17 @@ class ActivityAdmin(admin.ModelAdmin):
         'creator_avatar',
         'formatted_items',
         'formatted_white_list',
+        'formatted_last_modified',
     ]
 
     search_fields = ['activity_title', 'creator_weixin_name', 'creator_weixin_id']
     list_per_page = 20
-    ordering = ('-id',)
+    ordering = ('-last_modified',)
+
+    def formatted_last_modified(self, obj):
+        if not obj.last_modified:
+            return "-"
+        return datetime.fromtimestamp(obj.last_modified).strftime("%Y-%m-%d %H:%M:%S")
 
     def creator_avatar(self, obj):
         """Show the creator's Weixin avatar."""
