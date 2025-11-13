@@ -288,6 +288,7 @@ def serialize_activity(request, activity):
         'creator_weixin_name': activity.creator_weixin_name,
         'activity_title': activity.activity_title,
         'activity_items': sorted_items,
+        'activity_type': activity.activity_type,
         'white_list': white_list_with_avatar_url
     }
 
