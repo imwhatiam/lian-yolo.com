@@ -35,6 +35,7 @@ class ActivityAdmin(admin.ModelAdmin):
 
     search_fields = ['activity_title', 'creator_weixin_name', 'creator_weixin_id']
     list_per_page = 20
+    list_filter = ('activity_type',)
     ordering = ('-last_modified',)
 
     def title(self, obj):
