@@ -309,11 +309,13 @@ class ActivitiesView(APIView):
 
         # get my activities
         my_activities = []
-        for activity in Activities.objects.filter(creator_weixin_id=weixin_id):
+        for activity in Activities.objects.filter(creator_weixin_id=weixin_id) \
+                                          .exclude(activity_type='public'):
             my_activities.append(serialize_activity(request, activity))
 
         # get shared activities
-        activities = Activities.objects.exclude(creator_weixin_id=weixin_id)
+        activities = Activities.objects.exclude(creator_weixin_id=weixin_id) \
+                                       .exclude(activity_type='public')
         if connection.vendor == 'sqlite':
             activities = activities.filter(white_list__icontains=weixin_id)
         else:
@@ -323,9 +325,15 @@ class ActivitiesView(APIView):
         for activity in activities:
             shared_activities.append(serialize_activity(request, activity))
 
+        # get public activities
+        public_activities = []
+        for activity in Activities.objects.filter(activity_type='public'):
+            public_activities.append(serialize_activity(request, activity))
+
         return Response({
             'my': my_activities,
             'shared': shared_activities,
+            'public': public_activities,
         })
 
     def post(self, request):
@@ -364,10 +372,12 @@ class ActivitiesView(APIView):
             }
         ]
 
-        # 创建活动
+        activity_type = request.data.get('activity_type', '')
+
         activity = Activities.objects.create(
             creator_weixin_id=data['creator_weixin_id'],
             activity_title=data['activity_title'],
+            activity_type=activity_type,
             activity_items=processed_activity_items,
             white_list=white_list
         )

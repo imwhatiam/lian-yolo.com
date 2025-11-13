@@ -36,6 +36,7 @@ class CheckList(models.Model):
 class Activities(models.Model):
     creator_weixin_id = models.CharField(max_length=255)
     creator_weixin_name = models.CharField(max_length=255)
+    activity_type = models.CharField(max_length=255, default='')
     activity_title = models.CharField(max_length=255)
     activity_items = models.JSONField(encoder=DjangoJSONEncoder)
     white_list = models.JSONField(encoder=DjangoJSONEncoder, default=list)

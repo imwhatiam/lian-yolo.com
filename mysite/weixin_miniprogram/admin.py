@@ -25,7 +25,8 @@ class CheckListAdmin(admin.ModelAdmin):
 @admin.register(Activities)
 class ActivityAdmin(admin.ModelAdmin):
     list_display = [
-        'activity_title',
+        'title',
+        'activity_type',
         'creator_avatar',
         'formatted_items',
         'formatted_white_list',
@@ -36,10 +37,22 @@ class ActivityAdmin(admin.ModelAdmin):
     list_per_page = 20
     ordering = ('-last_modified',)
 
+    def title(self, obj):
+        return obj.activity_title
+
+    title.short_description = "Title"
+
+    def activity_type(self, obj):
+        return obj.activity_type
+
+    activity_type.short_description = "Type"
+
     def formatted_last_modified(self, obj):
         if not obj.last_modified:
             return "-"
         return datetime.fromtimestamp(obj.last_modified).strftime("%Y-%m-%d %H:%M:%S")
+
+    formatted_last_modified.short_description = "Last Modified"
 
     def creator_avatar(self, obj):
         """Show the creator's Weixin avatar."""
@@ -56,7 +69,7 @@ class ActivityAdmin(admin.ModelAdmin):
         except WeixinUserInfo.DoesNotExist:
             return obj.creator_weixin_name or obj.creator_weixin_id
 
-    creator_avatar.short_description = "Creator Avatar"
+    creator_avatar.short_description = "Creator"
 
     def formatted_items(self, obj):
         """Pretty print activity_items JSON"""
@@ -74,7 +87,7 @@ class ActivityAdmin(admin.ModelAdmin):
         except Exception:
             return format_html("<span style='color:red;'>Invalid JSON</span>")
 
-    formatted_items.short_description = "Activity Items"
+    formatted_items.short_description = "Items"
     formatted_items.allow_tags = True
 
     def formatted_white_list(self, obj):
