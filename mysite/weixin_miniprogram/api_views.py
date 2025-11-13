@@ -292,6 +292,32 @@ def serialize_activity(request, activity):
     }
 
 
+def get_activities(request, weixin_id):
+
+    # get my activities
+    my_activities = []
+    for activity in Activities.objects.filter(creator_weixin_id=weixin_id) \
+                                      .exclude(activity_type='public'):
+        my_activities.append(serialize_activity(request, activity))
+
+    # get shared activities
+    activities = Activities.objects.exclude(creator_weixin_id=weixin_id) \
+                                   .exclude(activity_type='public')
+    if connection.vendor == 'sqlite':
+        activities = activities.filter(white_list__icontains=weixin_id)
+    else:
+        activities = activities.filter(white_list__contains=[weixin_id])
+
+    shared_activities = []
+    for activity in activities:
+        shared_activities.append(serialize_activity(request, activity))
+
+    # get public activities
+    public_activities = []
+    for activity in Activities.objects.filter(activity_type='public'):
+        public_activities.append(serialize_activity(request, activity))
+
+
 class ActivitiesView(APIView):
     """
     处理活动列表的获取和创建
@@ -307,29 +333,8 @@ class ActivitiesView(APIView):
                 'error': '参数 weixin_id 不能为空'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # get my activities
-        my_activities = []
-        for activity in Activities.objects.filter(creator_weixin_id=weixin_id) \
-                                          .exclude(activity_type='public'):
-            my_activities.append(serialize_activity(request, activity))
-
-        # get shared activities
-        activities = Activities.objects.exclude(creator_weixin_id=weixin_id) \
-                                       .exclude(activity_type='public')
-        if connection.vendor == 'sqlite':
-            activities = activities.filter(white_list__icontains=weixin_id)
-        else:
-            activities = activities.filter(white_list__contains=[weixin_id])
-
-        shared_activities = []
-        for activity in activities:
-            shared_activities.append(serialize_activity(request, activity))
-
-        # get public activities
-        public_activities = []
-        for activity in Activities.objects.filter(activity_type='public'):
-            public_activities.append(serialize_activity(request, activity))
-
+        my_activities, shared_activities, public_activities = get_activities(request,
+                                                                             weixin_id)
         return Response({
             'my': my_activities,
             'shared': shared_activities,
@@ -526,32 +531,20 @@ class ActivityCopyToMyView(APIView):
         ]
 
         # 创建活动
-        activity = Activities.objects.create(
+        Activities.objects.create(
             creator_weixin_id=weixin_id,
             activity_title=old_activity.activity_title,
             activity_items=processed_activity_items,
             white_list=white_list
         )
 
-        # get my activities
-        my_activities = []
-        for activity in Activities.objects.filter(creator_weixin_id=weixin_id):
-            my_activities.append(serialize_activity(request, activity))
-
-        # get shared activities
-        activities = Activities.objects.exclude(creator_weixin_id=weixin_id)
-        if connection.vendor == 'sqlite':
-            activities = activities.filter(white_list__icontains=weixin_id)
-        else:
-            activities = activities.filter(white_list__contains=[weixin_id])
-
-        shared_activities = []
-        for activity in activities:
-            shared_activities.append(serialize_activity(request, activity))
+        my_activities, shared_activities, public_activities = get_activities(request,
+                                                                             weixin_id)
 
         return Response({
             'my': my_activities,
             'shared': shared_activities,
+            'public': public_activities
         })
 
 
