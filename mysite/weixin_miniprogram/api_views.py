@@ -317,6 +317,8 @@ def get_activities(request, weixin_id):
     for activity in Activities.objects.filter(activity_type='public'):
         public_activities.append(serialize_activity(request, activity))
 
+    return my_activities, shared_activities, public_activities
+
 
 class ActivitiesView(APIView):
     """
