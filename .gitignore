@@ -32,6 +32,7 @@ ENV/
 # ── Django ────────────────────────────────────────────────────────────────────
 backend/*.sqlite3
 backend/logs
+backend/staticfiles
 
 # ── Environment variables ──────────────────────────────────────────────────────
 .env
