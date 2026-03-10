@@ -1,0 +1,566 @@
+import logging
+from functools import wraps
+
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+from django.db import connection
+from django.core.cache import cache
+
+from .models import WeixinUserInfo, Activities
+
+logger = logging.getLogger(__name__)
+
+
+def require_activity_exists(view_func):
+    """
+    装饰器：验证活动是否存在
+    """
+    @wraps(view_func)
+    def wrapper(self, request, activity_id, *args, **kwargs):
+        try:
+            activity = Activities.objects.get(id=activity_id)
+        except Activities.DoesNotExist:
+            return Response({
+                'error': '活动不存在'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # 将活动对象传递给视图方法
+        return view_func(self, request, activity, *args, **kwargs)
+    return wrapper
+
+
+def get_avatar_url(request, weixin_id):
+    cache_key = f"avatar_url_{weixin_id}"
+    avatar_url = cache.get(cache_key)
+
+    if not avatar_url:
+        try:
+            user_info = WeixinUserInfo.objects.get(weixin_id=weixin_id)
+            avatar_url = request.build_absolute_uri(user_info.avatar.url)
+            cache.set(cache_key, avatar_url)
+        except WeixinUserInfo.DoesNotExist:
+            avatar_url = ''
+
+    return avatar_url
+
+
+def serialize_activity(request, activity):
+
+    items_with_avatar_url = {}
+    for key, item in activity.activity_items.items():
+
+        operator = item.get('operator', '')
+        if item['status'] != '' and operator:
+            item['operator_avatar_url'] = get_avatar_url(request, operator)
+        else:
+            item['operator_avatar_url'] = ''
+
+        items_with_avatar_url[key] = item
+
+    sorted_items = dict(sorted(items_with_avatar_url.items(), key=lambda x: int(x[0])))
+
+    white_list_with_avatar_url = []
+    for item in activity.white_list:
+        avatar_url = get_avatar_url(request, item.get('weixin_id', ''))
+        item['avatar_url'] = avatar_url
+        white_list_with_avatar_url.append(item)
+
+    return {
+        'id': activity.id,
+        'creator_weixin_id': activity.creator_weixin_id,
+        'creator_weixin_name': activity.creator_weixin_name,
+        'activity_title': activity.activity_title,
+        'activity_items': sorted_items,
+        'activity_type': activity.activity_type,
+        'white_list': white_list_with_avatar_url
+    }
+
+
+def get_activities(request, weixin_id):
+
+    # get my activities
+    my_activities = []
+    for activity in Activities.objects.filter(creator_weixin_id=weixin_id) \
+                                      .exclude(activity_type='public'):
+        my_activities.append(serialize_activity(request, activity))
+
+    # get shared activities
+    activities = Activities.objects.exclude(creator_weixin_id=weixin_id) \
+                                   .exclude(activity_type='public')
+    if connection.vendor == 'sqlite':
+        activities = activities.filter(white_list__icontains=weixin_id)
+    else:
+        activities = activities.filter(white_list__contains=[weixin_id])
+
+    shared_activities = []
+    for activity in activities:
+        shared_activities.append(serialize_activity(request, activity))
+
+    # get public activities
+    public_activities = []
+    for activity in Activities.objects.filter(activity_type='public'):
+        public_activities.append(serialize_activity(request, activity))
+
+    return my_activities, shared_activities, public_activities
+
+
+class ActivitiesView(APIView):
+    """
+    处理活动列表的获取和创建
+    GET: 获取用户可访问的活动列表
+    POST: 创建新活动
+    """
+
+    def get(self, request):
+
+        weixin_id = request.GET.get('weixin_id')
+        if not weixin_id:
+            return Response({
+                'error': '参数 weixin_id 不能为空'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        my_activities, shared_activities, public_activities = get_activities(request,
+                                                                             weixin_id)
+        return Response({
+            'my': my_activities,
+            'shared': shared_activities,
+            'public': public_activities,
+        })
+
+    def post(self, request):
+
+        data = request.data
+
+        # 手动验证必需字段
+        required_fields = ['creator_weixin_id', 'activity_title', 'activity_items']
+        for field in required_fields:
+            if field not in data:
+                return Response({
+                    'error': f'字段 {field} 是必需的'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 处理活动事项列表
+        activity_item_list = data['activity_items']
+        if not isinstance(activity_item_list, list):
+            return Response({
+                'error': 'activity_items 必须是列表'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        processed_activity_items = {}
+        for index, item_name in enumerate(activity_item_list):
+            processed_activity_items[str(index + 1)] = {
+                "name": item_name,
+                "status": "",
+                "operator": ""
+            }
+
+        creator_weixin_id = data['creator_weixin_id']
+        white_list = [
+            {
+                'weixin_id': creator_weixin_id,
+                'avatar_url': get_avatar_url(request, creator_weixin_id),
+                'permission': 'creator'
+            }
+        ]
+
+        activity_type = request.data.get('activity_type', '')
+
+        activity = Activities.objects.create(
+            creator_weixin_id=data['creator_weixin_id'],
+            activity_title=data['activity_title'],
+            activity_type=activity_type,
+            activity_items=processed_activity_items,
+            white_list=white_list
+        )
+
+        return Response(serialize_activity(request, activity))
+
+
+class ActivityView(APIView):
+    """
+    处理单个活动的详情、更新和删除
+    GET: 获取活动详情
+    PUT: 更新活动标题
+    DELETE: 删除活动
+    """
+
+    @require_activity_exists
+    def get(self, request, activity):
+
+        weixin_id = request.GET.get('weixin_id')
+        if not weixin_id:
+            return Response({
+                'error': '参数 weixin_id 不能为空'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # add new visitor to white list
+        white_list = activity.white_list
+        if weixin_id not in [item['weixin_id'] for item in white_list]:
+            white_list.append({
+                'weixin_id': weixin_id,
+                'avatar_url': get_avatar_url(request, weixin_id),
+                'permission': ''
+            })
+            activity.white_list = white_list
+            activity.save()
+
+        return Response(serialize_activity(request, activity))
+
+    @require_activity_exists
+    def put(self, request, activity):
+
+        data = request.data
+        weixin_id = data.get('weixin_id')
+        new_title = data.get('activity_title')
+
+        if not weixin_id:
+            return Response({
+                'error': 'weixin_id 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not new_title:
+            return Response({
+                'error': 'activity_title 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 权限验证：只有创建者可以更新活动标题
+        if weixin_id != activity.creator_weixin_id:
+            return Response({
+                'error': '权限不足，只有活动创建者可以更新活动标题'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        # 更新活动标题
+        activity.activity_title = new_title
+        activity.save()
+
+        return Response(serialize_activity(request, activity))
+
+    @require_activity_exists
+    def delete(self, request, activity):
+
+        data = request.data
+        weixin_id = data.get('weixin_id')
+        source = data.get('source')
+
+        if not weixin_id:
+            return Response({
+                'error': 'weixin_id 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not source:
+            return Response({
+                'error': 'source 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if source not in ['my', 'shared']:
+            return Response({
+                'error': 'source 必须是 "my" 或 "shared"'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if source == 'my':
+            if weixin_id != activity.creator_weixin_id:
+                return Response({
+                    'error': '权限不足，只有活动创建者可以删除自己的活动'
+                }, status=status.HTTP_403_FORBIDDEN)
+            else:
+                activity.delete()
+
+        if source == 'shared':
+            shared_weixin_id_list = [item['weixin_id'] for item in activity.white_list]
+            if weixin_id not in shared_weixin_id_list:
+                return Response({
+                    'error': '权限不足，只有活动白名单中的成员可以删除共享的活动'
+                }, status=status.HTTP_403_FORBIDDEN)
+            else:
+                new_white_list = []
+                for dict_item in activity.white_list:
+                    if dict_item['weixin_id'] != weixin_id:
+                        new_white_list.append(dict_item)
+                activity.white_list = new_white_list
+                activity.save()
+
+        return Response({
+            'message': '活动删除成功'
+        }, status=status.HTTP_200_OK)
+
+
+class ActivityCopyToMyView(APIView):
+
+    @require_activity_exists
+    def post(self, request, old_activity):
+
+        data = request.data
+        weixin_id = data.get('weixin_id')
+
+        if not weixin_id:
+            return Response({
+                'error': 'weixin_id 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # create new activity
+        old_activity_item_list = [item['name'] for key, item in
+                                  old_activity.activity_items.items()]
+        processed_activity_items = {}
+        for index, item_name in enumerate(old_activity_item_list):
+            processed_activity_items[str(index + 1)] = {
+                "name": item_name,
+                "status": "",
+                "operator": ""
+            }
+
+        white_list = [
+            {
+                'weixin_id': weixin_id,
+                'avatar_url': get_avatar_url(request, weixin_id),
+                'permission': 'creator'
+            }
+        ]
+
+        # 创建活动
+        Activities.objects.create(
+            creator_weixin_id=weixin_id,
+            activity_title=old_activity.activity_title,
+            activity_items=processed_activity_items,
+            white_list=white_list
+        )
+
+        my_activities, shared_activities, public_activities = get_activities(request,
+                                                                             weixin_id)
+
+        return Response({
+            'my': my_activities,
+            'shared': shared_activities,
+            'public': public_activities
+        })
+
+
+class ActivityWhiteListView(APIView):
+    """
+    处理活动白名单的更新
+    PUT: 更新活动白名单
+    """
+
+    @require_activity_exists
+    def put(self, request, activity):
+
+        data = request.data
+        weixin_id = data.get('weixin_id')
+        white_list_dict = data.get('white_list')
+
+        if not weixin_id:
+            return Response({
+                'error': 'weixin_id 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if white_list_dict is None:
+            return Response({
+                'error': 'white_list 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not isinstance(white_list_dict, dict):
+            return Response({
+                'error': 'white_list 必须是 dict 类型'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        permission = white_list_dict['permission']
+        if permission not in ('admin', ''):
+            return Response({
+                'error': 'white_list 中的 permission 必须是 "admin" 或 ""'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 权限验证：只有创建者可以操作白名单
+        if weixin_id != activity.creator_weixin_id:
+            return Response({
+                'error': '权限不足，只有活动创建者可以操作白名单'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        white_list_exists = False
+        new_white_list = []
+        for dict_item in activity.white_list:
+            if dict_item['weixin_id'] == white_list_dict['weixin_id']:
+                white_list_exists = True
+                dict_item.update(white_list_dict)
+
+            new_white_list.append(dict_item)
+
+        if not white_list_exists:
+            new_white_list.append(white_list_dict)
+
+        activity.white_list = new_white_list
+        activity.save()
+
+        return Response(serialize_activity(request, activity))
+
+
+class ActivityItemsView(APIView):
+    """
+    处理活动事项的添加
+    POST: 添加新的活动事项
+    """
+
+    @require_activity_exists
+    def post(self, request, activity):
+
+        data = request.data
+        weixin_id = data.get('weixin_id')
+        item_name = data.get('activity_item_name')
+
+        if not weixin_id:
+            return Response({
+                'error': 'weixin_id 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not item_name:
+            return Response({
+                'error': 'activity_item_name 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 权限验证：只有创建者可以更新活动标题
+        if weixin_id != activity.creator_weixin_id:
+            return Response({
+                'error': '权限不足，只有活动创建者可以新增活动事项'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        # 找到最大的键值并生成下一个键
+        if activity.activity_items:
+            max_key = max(int(k) for k in activity.activity_items.keys())
+            next_key = str(max_key + 1)
+        else:
+            next_key = "1"
+            activity.activity_items = {}
+
+        # 添加新的事项
+        activity.activity_items[next_key] = {
+            "name": item_name,
+            "status": "",
+            "operator": ""
+        }
+        activity.save()
+
+        return Response(serialize_activity(request, activity))
+
+
+class ActivityItemsInitView(APIView):
+
+    @require_activity_exists
+    def put(self, request, activity):
+
+        data = request.data
+        weixin_id = data.get('weixin_id')
+
+        if not weixin_id:
+            return Response({
+                'error': 'weixin_id 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if weixin_id != activity.creator_weixin_id:
+            return Response({
+                'error': '权限不足，只有活动创建者可以初始化活动事项'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        new_items = {}
+        for key, item in activity.activity_items.items():
+            new_items[key] = {
+                "name": item['name'],
+                "status": "",
+                "operator": ""
+            }
+
+        activity.activity_items = new_items
+        activity.save()
+
+        return Response(serialize_activity(request, activity))
+
+
+class ActivityItemView(APIView):
+    """
+    处理单个活动事项的更新和删除
+    PUT: 更新活动事项状态
+    DELETE: 删除活动事项
+    """
+
+    @require_activity_exists
+    def put(self, request, activity, item_id):
+
+        data = request.data
+        weixin_id = data.get('weixin_id')
+        item_status = data.get('activity_item_status')
+
+        if not weixin_id:
+            return Response({
+                'error': 'weixin_id 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if item_status is None:
+            return Response({
+                'error': 'activity_item_status 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if item_status not in ['completed', 'deleted', '']:
+            return Response({
+                'error': 'activity_item_status 必须是 "completed", "deleted" 或空字符串'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 权限验证：操作者必须在白名单中
+        if weixin_id not in [item['weixin_id'] for item in activity.white_list]:
+            return Response({
+                'error': '权限不足，操作者不在白名单中'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        # 检查事项是否存在
+        if item_id not in activity.activity_items:
+            return Response({
+                'error': f'活动事项ID {item_id} 不存在'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        current_item = activity.activity_items[item_id]
+
+        # 检查是否可以更新：状态为空或操作者是同一个人
+        if (current_item.get('status', '') != '' and
+                weixin_id not in [current_item.get('operator', ''), activity.creator_weixin_id]):
+            return Response({
+                'error': '无法操作，该活动事项已被其他人操作'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 更新事项状态
+        if item_status == '':
+            activity.activity_items[item_id]['status'] = ''
+            activity.activity_items[item_id]['operator'] = ''
+        else:
+            activity.activity_items[item_id]['status'] = item_status
+            activity.activity_items[item_id]['operator'] = weixin_id
+
+        activity.save()
+
+        return Response(serialize_activity(request, activity))
+
+    @require_activity_exists
+    def delete(self, request, activity, item_id):
+
+        data = request.data
+        weixin_id = data.get('weixin_id')
+
+        if not weixin_id:
+            return Response({
+                'error': 'weixin_id 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 权限验证：操作者必须在白名单中
+        if weixin_id != activity.creator_weixin_id:
+            return Response({
+                'error': '权限不足，只有活动创建者可以删除活动事项'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        # 检查事项是否存在
+        if item_id not in activity.activity_items:
+            return Response({
+                'error': f'活动事项ID {item_id} 不存在'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # 删除事项
+        activity.activity_items.pop(item_id)
+        activity.save()
+
+        return Response(serialize_activity(request, activity))
