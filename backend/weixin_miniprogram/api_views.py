@@ -1,9 +1,12 @@
+import os
 import logging
+import requests
 from functools import wraps
 
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from django.db import connection
 from django.core.cache import cache
@@ -104,6 +107,80 @@ def get_activities(request, weixin_id):
         public_activities.append(serialize_activity(request, activity))
 
     return my_activities, shared_activities, public_activities
+
+
+class JSCode2SessionView(APIView):
+
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, *args, **kwargs):
+
+        code = request.data.get("code")
+        if not code:
+            error_msg = "code is required"
+            logger.error(error_msg)
+            logger.error(request.data)
+            return Response({"error": error_msg},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        app_id = os.getenv("WEIXIN_MINIPROGRAM_APP_ID")
+        app_secret = os.getenv("WEIXIN_MINIPROGRAM_APP_SECRET")
+
+        if not app_id or not app_secret:
+            error_msg = "failed to get app_id or app_secret"
+            logger.error(error_msg)
+            logger.error(request.data)
+            return Response({"error": error_msg},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        grant_type = os.getenv("WEIXIN_MINIPROGRAM_GRANT_TYPE",
+                               "authorization_code")
+        url = os.getenv("WEIXIN_MINIPROGRAM_JSCODE2SESSION_URL",
+                        "https://api.weixin.qq.com/sns/jscode2session")
+
+        params = {
+            "appid": app_id,
+            "secret": app_secret,
+            "js_code": code,
+            "grant_type": grant_type,
+        }
+
+        r = requests.get(url, params=params)
+        if r.status_code != 200:
+            error_msg = "failed to get openid"
+            logger.error(error_msg)
+            logger.error(request.data)
+            logger.error(r.json())
+            return Response({"error": error_msg},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        openid = r.json().get("openid")
+        if not openid:
+            error_msg = "failed to get openid"
+            logger.error(error_msg)
+            logger.error(request.data)
+            logger.error(r.json())
+            return Response({"error": error_msg},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        nickname = request.data.get("nickname", "")
+
+        avatar_file = request.FILES.get('avatar')
+        user_info, _ = WeixinUserInfo.objects.get_or_create(weixin_id=openid)
+
+        if user_info.avatar:
+            user_info.avatar.delete(save=False)
+
+        user_info.nickname = nickname
+        user_info.avatar = avatar_file
+        user_info.save()
+
+        data = {}
+        data["weixin_id"] = user_info.weixin_id
+        data["nickname"] = user_info.nickname
+        data["avatar_url"] = request.build_absolute_uri(user_info.avatar.url)
+
+        return Response(data)
 
 
 class ActivitiesView(APIView):

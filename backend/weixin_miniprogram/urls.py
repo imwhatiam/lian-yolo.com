@@ -1,5 +1,6 @@
 from django.urls import path
 from .api_views import (
+    JSCode2SessionView,
     ActivitiesView,
     ActivityView,
     ActivityCopyToMyView,
@@ -10,6 +11,10 @@ from .api_views import (
 )
 
 urlpatterns = [
+    path('api/jscode2session/',
+         JSCode2SessionView.as_view(),
+         name='jscode2session-api-view'),
+
     path('api/activities/', ActivitiesView.as_view(), name='activities'),
     path('api/activities/<int:activity_id>/', ActivityView.as_view(), name='activity'),
     path('api/activities/<int:activity_id>/copy-to-my/', ActivityCopyToMyView.as_view(), name='activity-copy-to-my'),
