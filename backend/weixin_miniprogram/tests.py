@@ -11,6 +11,7 @@
     cd backend && python manage.py test weixin_miniprogram
 """
 
+import base64
 import os
 import shutil
 import tempfile
@@ -24,7 +25,7 @@ from django.test import override_settings
 from django.utils.functional import empty
 from rest_framework.test import APITestCase
 
-from .api_views import get_avatar_url
+from .api_views import AvatarDecodeError, build_avatar_from_base64, get_avatar_url
 from .models import Activities, WeixinUserInfo
 
 BASE_DIR = settings.BASE_DIR
@@ -268,6 +269,159 @@ class JSCode2SessionTests(RollCallAPITestCase):
     def test_login_returns_json(self):
         response = self.login(openid='openid-6')
         self.assertEqual(response['Content-Type'].split(';')[0], 'application/json')
+
+
+# ======================================================================
+# 1b. 登录：JSON + base64 头像通道
+#
+# 这条通道存在的唯一理由：wx.uploadFile 要「uploadFile 合法域名」，而那个列表可能
+# 由第三方平台托管、开发者改不了。wx.request 用的是另一张白名单，一般已经配好。
+# ======================================================================
+
+@APP_CREDENTIALS
+class JSCode2SessionBase64Tests(RollCallAPITestCase):
+
+    def login_json(self, openid='openid-b64', avatar_bytes=None,
+                   ext='jpeg', base64_value=None, code='code-json'):
+        payload = {}
+        if code is not None:
+            payload['code'] = code
+        if base64_value is not None:
+            payload['avatar_base64'] = base64_value
+            payload['avatar_ext'] = ext
+        elif avatar_bytes is not None:
+            payload['avatar_base64'] = base64.b64encode(avatar_bytes).decode('ascii')
+            payload['avatar_ext'] = ext
+
+        with mock.patch('weixin_miniprogram.api_views.requests.get',
+                        return_value=fake_wechat_response({'openid': openid})):
+            return self.client.post(f'{API}/jscode2session/', payload, format='json')
+
+    def test_json_login_with_base64_avatar(self):
+        response = self.login_json(openid='openid-b64', avatar_bytes=PNG_1X1, ext='png')
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body['weixin_id'], 'openid-b64')
+        self.assertTrue(
+            body['avatar_url'].startswith('http://testserver/avatars/weixin/openid-b64/'),
+            body['avatar_url'])
+        self.assertTrue(body['avatar_url'].endswith('.png'))
+
+        user = WeixinUserInfo.objects.get(weixin_id='openid-b64')
+        self.assertTrue(user.avatar.name.endswith('.png'))
+        # 落盘的字节要和原始图片完全一致
+        with open(os.path.join(settings.MEDIA_ROOT, user.avatar.name), 'rb') as handle:
+            self.assertEqual(handle.read(), PNG_1X1)
+
+    def test_json_login_without_avatar_is_allowed(self):
+        response = self.login_json(openid='openid-b64-noavatar')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['avatar_url'], '')
+        self.assertEqual(WeixinUserInfo.objects.get(weixin_id='openid-b64-noavatar').avatar, '')
+
+    def test_json_login_empty_base64_is_treated_as_no_avatar(self):
+        response = self.login_json(openid='openid-b64-empty', base64_value='')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['avatar_url'], '')
+
+    def test_json_login_keeps_existing_avatar_when_absent(self):
+        self.login(openid='openid-b64-keep', avatar_name='a.png')
+        before = WeixinUserInfo.objects.get(weixin_id='openid-b64-keep').avatar.name
+
+        response = self.login_json(openid='openid-b64-keep')
+
+        self.assertEqual(response.status_code, 200)
+        user = WeixinUserInfo.objects.get(weixin_id='openid-b64-keep')
+        self.assertEqual(user.avatar.name, before)
+        self.assertTrue(response.json()['avatar_url'].endswith(before))
+
+    def test_json_login_replaces_existing_avatar(self):
+        self.login(openid='openid-b64-swap', avatar_name='a.png')
+        before = WeixinUserInfo.objects.get(weixin_id='openid-b64-swap').avatar.name
+
+        response = self.login_json(openid='openid-b64-swap', avatar_bytes=PNG_1X1, ext='png')
+        after = WeixinUserInfo.objects.get(weixin_id='openid-b64-swap').avatar.name
+
+        self.assertNotEqual(before, after)
+        self.assertFalse(os.path.exists(os.path.join(settings.MEDIA_ROOT, before)))
+        self.assertIn(os.path.basename(after), response.json()['avatar_url'])
+
+    def test_json_login_invalidates_cached_avatar_url(self):
+        first = self.login_json(openid='openid-b64-cache',
+                                avatar_bytes=PNG_1X1, ext='png').json()
+        self.create_activity(creator='openid-b64-cache', title='我的活动')
+        cache_key = 'avatar_url_openid-b64-cache'
+        self.assertTrue(cache.get(cache_key))
+
+        second = self.login_json(openid='openid-b64-cache',
+                                 avatar_bytes=PNG_1X1, ext='jpeg').json()
+
+        self.assertIsNone(cache.get(cache_key))
+        self.assertNotEqual(first['avatar_url'], second['avatar_url'])
+
+    def test_json_login_rejects_malformed_base64(self):
+        response = self.login_json(openid='openid-b64-bad', base64_value='这不是 base64!!')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('base64', response.json()['error'])
+        self.assertEqual(WeixinUserInfo.objects.count(), 0)
+
+    def test_json_login_rejects_oversized_avatar(self):
+        with mock.patch('weixin_miniprogram.api_views.MAX_AVATAR_BYTES', 10):
+            response = self.login_json(openid='openid-b64-big', avatar_bytes=PNG_1X1)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('过大', response.json()['error'])
+
+    def test_json_login_falls_back_to_jpeg_for_unknown_extension(self):
+        response = self.login_json(openid='openid-b64-ext',
+                                   avatar_bytes=PNG_1X1, ext='exe')
+
+        self.assertEqual(response.status_code, 200)
+        user = WeixinUserInfo.objects.get(weixin_id='openid-b64-ext')
+        self.assertTrue(user.avatar.name.endswith('.jpeg'))
+
+    def test_json_login_accepts_extension_with_leading_dot(self):
+        self.login_json(openid='openid-b64-dot', avatar_bytes=PNG_1X1, ext='.png')
+        user = WeixinUserInfo.objects.get(weixin_id='openid-b64-dot')
+        self.assertTrue(user.avatar.name.endswith('.png'))
+
+    def test_json_login_still_requires_code(self):
+        response = self.client.post(f'{API}/jscode2session/', {}, format='json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_multipart_channel_still_works(self):
+        # 向后兼容：旧客户端还在用 multipart，不能被这次改动弄坏
+        response = self.login(openid='openid-both', avatar_name='a.png')
+
+        self.assertEqual(response.status_code, 200)
+        user = WeixinUserInfo.objects.get(weixin_id='openid-both')
+        self.assertTrue(user.avatar.name.endswith('.png'))
+
+    def test_build_avatar_from_base64_returns_none_without_payload(self):
+        self.assertIsNone(build_avatar_from_base64({}))
+        self.assertIsNone(build_avatar_from_base64({'avatar_ext': 'png'}))
+
+    def test_build_avatar_from_base64_builds_uploaded_file(self):
+        uploaded = build_avatar_from_base64({
+            'avatar_base64': base64.b64encode(PNG_1X1).decode('ascii'),
+            'avatar_ext': 'gif',
+        })
+
+        self.assertEqual(uploaded.name, 'avatar.gif')
+        self.assertEqual(uploaded.content_type, 'image/gif')
+        self.assertEqual(uploaded.read(), PNG_1X1)
+
+    def test_build_avatar_from_base64_raises_on_garbage(self):
+        with self.assertRaises(AvatarDecodeError):
+            build_avatar_from_base64({'avatar_base64': '***'})
+
+    def test_build_avatar_from_base64_treats_empty_string_as_absent(self):
+        # 空字符串等于「本次没传头像」，不该报错，也不该把已有头像清掉
+        self.assertIsNone(build_avatar_from_base64({'avatar_base64': ''}))
 
 
 # ======================================================================

@@ -1,4 +1,6 @@
 import os
+import base64
+import binascii
 import logging
 import requests
 from functools import wraps
@@ -6,9 +8,10 @@ from functools import wraps
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.core.cache import cache
 
@@ -145,9 +148,49 @@ def get_activities(request, weixin_id):
     return my_activities, shared_activities, public_activities
 
 
+AVATAR_EXTENSIONS = ('jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp')
+MAX_AVATAR_BYTES = 4 * 1024 * 1024
+
+
+class AvatarDecodeError(ValueError):
+    """avatar_base64 不合法时抛出，由视图转成 400。"""
+
+
+def build_avatar_from_base64(data):
+    """
+    备用头像通道：图片以 base64 塞在 JSON body 里。
+
+    为什么需要它：小程序端 wx.uploadFile 要求把域名配进「uploadFile 合法域名」，
+    而该列表可能由第三方平台托管、开发者自己改不了。普通 wx.request 用的是另一张
+    白名单（request 合法域名），通常已经配好，所以这里给一条不依赖 uploadFile 的路。
+
+    返回 None 表示本次没有传头像（保持原有头像不动）。
+    """
+    encoded = data.get('avatar_base64')
+    if not encoded:
+        return None
+
+    ext = str(data.get('avatar_ext') or 'jpeg').lower().lstrip('.')
+    if ext not in AVATAR_EXTENSIONS:
+        ext = 'jpeg'
+
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError, TypeError):
+        raise AvatarDecodeError('avatar_base64 不是合法的 base64 数据')
+
+    if not raw:
+        raise AvatarDecodeError('avatar_base64 解码后是空内容')
+
+    if len(raw) > MAX_AVATAR_BYTES:
+        raise AvatarDecodeError('头像文件过大，请换一张小一点的图片')
+
+    return SimpleUploadedFile(f'avatar.{ext}', raw, content_type=f'image/{ext}')
+
+
 class JSCode2SessionView(APIView):
 
-    parser_classes = (MultiPartParser, FormParser)
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def post(self, request, *args, **kwargs):
 
@@ -201,7 +244,17 @@ class JSCode2SessionView(APIView):
 
         nickname = request.data.get("nickname", "")
 
+        # 两条通道二选一：multipart 的 avatar 文件，或 JSON 里的 avatar_base64。
+        # multipart 保留是为了向后兼容，已经在外面跑的旧版本客户端不用改。
         avatar_file = request.FILES.get('avatar')
+        if avatar_file is None:
+            try:
+                avatar_file = build_avatar_from_base64(request.data)
+            except AvatarDecodeError as exc:
+                logger.error('avatar decode failed: %s', exc)
+                return Response({"error": str(exc)},
+                                status=status.HTTP_400_BAD_REQUEST)
+
         user_info, _ = WeixinUserInfo.objects.get_or_create(weixin_id=openid)
 
         # 只有本次真的上传了头像才替换，否则保留原头像。

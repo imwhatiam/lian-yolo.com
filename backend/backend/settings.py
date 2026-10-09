@@ -66,6 +66,11 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")   # collected by collectstat
 MEDIA_ROOT = BASE_DIR
 MEDIA_URL = '/'
 
+# 头像的另一条通道是把图片 base64 塞进 JSON body（见 api_views.build_avatar_from_base64），
+# Django 默认只允许 2.5MB 的非文件请求体，base64 会膨胀约 1/3，这里放宽到 8MB。
+# 单张头像本身在 api_views.MAX_AVATAR_BYTES 里另外限到 4MB。
+DATA_UPLOAD_MAX_MEMORY_SIZE = 8 * 1024 * 1024
+
 
 
 # Application definition
