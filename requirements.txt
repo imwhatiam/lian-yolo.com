@@ -1,0 +1,6 @@
+# 点名清单小程序后端依赖
+# 本机已验证版本：Python 3.14.4 / Django 6.1 / DRF 3.18 / requests 2.32 / Pillow 12.1
+Django>=6.0,<7.0
+djangorestframework>=3.16,<4.0
+requests>=2.31,<3.0
+Pillow>=10.0

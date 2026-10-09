@@ -21,6 +21,12 @@ class Activities(models.Model):
     class Meta:
         db_table = 'activity'
 
+    def save(self, *args, **kwargs):
+        # 管理后台的 save_model 会维护这个字段，但 API 侧的 save() 不会，
+        # 导致后台看到的"最后修改时间"长期不更新。统一在模型层维护。
+        self.last_modified = current_timestamp()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.activity_title} (ID: {self.id})"
 

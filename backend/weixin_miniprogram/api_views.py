@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 
+from django.conf import settings
 from django.db import connection
 from django.core.cache import cache
 
@@ -34,19 +35,44 @@ def require_activity_exists(view_func):
     return wrapper
 
 
+def invalidate_avatar_cache(weixin_id):
+    """用户换了头像后，旧的缓存 URL 必须立刻失效，否则会指向已删除的文件。"""
+    if weixin_id:
+        cache.delete(f"avatar_url_{weixin_id}")
+
+
 def get_avatar_url(request, weixin_id):
+    """取某个用户头像的绝对 URL；用户不存在或没有头像时返回空字符串。"""
+    if not weixin_id:
+        return ''
+
     cache_key = f"avatar_url_{weixin_id}"
     avatar_url = cache.get(cache_key)
+    if avatar_url:
+        return avatar_url
 
-    if not avatar_url:
-        try:
-            user_info = WeixinUserInfo.objects.get(weixin_id=weixin_id)
-            avatar_url = request.build_absolute_uri(user_info.avatar.url)
-            cache.set(cache_key, avatar_url)
-        except WeixinUserInfo.DoesNotExist:
-            avatar_url = ''
+    try:
+        user_info = WeixinUserInfo.objects.get(weixin_id=weixin_id)
+    except WeixinUserInfo.DoesNotExist:
+        return ''
 
+    if not user_info.avatar:
+        return ''
+
+    avatar_url = request.build_absolute_uri(user_info.avatar.url)
+    cache.set(cache_key, avatar_url)
     return avatar_url
+
+
+def _item_sort_key(key):
+    """
+    事项的 key 正常是 '1'、'2' 这样的数字字符串，按数值排序。
+    遇到历史脏数据（非数字 key）时退化为稳定排序，不抛异常。
+    """
+    try:
+        return (0, int(key))
+    except (TypeError, ValueError):
+        return (1, 0)
 
 
 def serialize_activity(request, activity):
@@ -55,14 +81,15 @@ def serialize_activity(request, activity):
     for key, item in activity.activity_items.items():
 
         operator = item.get('operator', '')
-        if item['status'] != '' and operator:
+        if item.get('status', '') != '' and operator:
             item['operator_avatar_url'] = get_avatar_url(request, operator)
         else:
             item['operator_avatar_url'] = ''
 
         items_with_avatar_url[key] = item
 
-    sorted_items = dict(sorted(items_with_avatar_url.items(), key=lambda x: int(x[0])))
+    sorted_items = dict(sorted(items_with_avatar_url.items(),
+                               key=lambda x: _item_sort_key(x[0])))
 
     white_list_with_avatar_url = []
     for item in activity.white_list:
@@ -81,6 +108,23 @@ def serialize_activity(request, activity):
     }
 
 
+def get_shared_activities(weixin_id):
+    """
+    别人创建、但白名单里包含我的活动。
+
+    SQLite 上 JSONField 不支持 __contains 查询，只能先用子串预筛，
+    但子串匹配会把 'u1' 误判成命中 'u10'，所以再用 Python 精确校验一次
+    （子串命中是精确命中的超集，只做收窄不会漏）。
+    """
+    activities = Activities.objects.exclude(creator_weixin_id=weixin_id) \
+                                   .exclude(activity_type='public')
+    if connection.vendor == 'sqlite':
+        activities = activities.filter(white_list__icontains=weixin_id)
+        return [activity for activity in activities
+                if weixin_id in [item.get('weixin_id') for item in activity.white_list]]
+    return list(activities.filter(white_list__contains=[weixin_id]))
+
+
 def get_activities(request, weixin_id):
 
     # get my activities
@@ -90,16 +134,8 @@ def get_activities(request, weixin_id):
         my_activities.append(serialize_activity(request, activity))
 
     # get shared activities
-    activities = Activities.objects.exclude(creator_weixin_id=weixin_id) \
-                                   .exclude(activity_type='public')
-    if connection.vendor == 'sqlite':
-        activities = activities.filter(white_list__icontains=weixin_id)
-    else:
-        activities = activities.filter(white_list__contains=[weixin_id])
-
-    shared_activities = []
-    for activity in activities:
-        shared_activities.append(serialize_activity(request, activity))
+    shared_activities = [serialize_activity(request, activity)
+                         for activity in get_shared_activities(weixin_id)]
 
     # get public activities
     public_activities = []
@@ -123,8 +159,8 @@ class JSCode2SessionView(APIView):
             return Response({"error": error_msg},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        app_id = os.getenv("WEIXIN_MINIPROGRAM_APP_ID")
-        app_secret = os.getenv("WEIXIN_MINIPROGRAM_APP_SECRET")
+        app_id = settings.WEIXIN_MINIPROGRAM_APP_ID
+        app_secret = settings.WEIXIN_MINIPROGRAM_APP_SECRET
 
         if not app_id or not app_secret:
             error_msg = "failed to get app_id or app_secret"
@@ -168,17 +204,27 @@ class JSCode2SessionView(APIView):
         avatar_file = request.FILES.get('avatar')
         user_info, _ = WeixinUserInfo.objects.get_or_create(weixin_id=openid)
 
-        if user_info.avatar:
-            user_info.avatar.delete(save=False)
+        # 只有本次真的上传了头像才替换，否则保留原头像。
+        # （原来是无条件赋值，客户端不带头像登录会把已有头像清空。）
+        if avatar_file is not None:
+            if user_info.avatar:
+                user_info.avatar.delete(save=False)
+            user_info.avatar = avatar_file
 
-        user_info.nickname = nickname
-        user_info.avatar = avatar_file
+        # 同理，客户端没有传 nickname 时不要用空字符串覆盖已有昵称。
+        if 'nickname' in request.data:
+            user_info.nickname = nickname
+
         user_info.save()
+
+        # 头像换了（文件名是新 uuid），旧的缓存 URL 必须失效。
+        invalidate_avatar_cache(user_info.weixin_id)
 
         data = {}
         data["weixin_id"] = user_info.weixin_id
         data["nickname"] = user_info.nickname
-        data["avatar_url"] = request.build_absolute_uri(user_info.avatar.url)
+        data["avatar_url"] = (request.build_absolute_uri(user_info.avatar.url)
+                              if user_info.avatar else '')
 
         return Response(data)
 
@@ -439,6 +485,18 @@ class ActivityWhiteListView(APIView):
         if not isinstance(white_list_dict, dict):
             return Response({
                 'error': 'white_list 必须是 dict 类型'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not white_list_dict.get('weixin_id'):
+            return Response({
+                'error': 'white_list 中的 weixin_id 是必需的'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 之前这里直接取 ['permission']，客户端漏传会抛 KeyError 变成 500。
+        # 缺字段属于请求不合法，返回 400，且不能默认成访客把管理员静默降级。
+        if 'permission' not in white_list_dict:
+            return Response({
+                'error': 'white_list 中的 permission 是必需的'
             }, status=status.HTTP_400_BAD_REQUEST)
 
         permission = white_list_dict['permission']

@@ -20,15 +20,52 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-9m%v^676#51-!9icf8d5u-)ox7!t$@e)m^*4n%nlf4af*$1+&&'
+# 默认值与原提交保持一致，线上通过环境变量 DJANGO_SECRET_KEY 覆盖。
+SECRET_KEY = os.getenv(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-9m%v^676#51-!9icf8d5u-)ox7!t$@e)m^*4n%nlf4af*$1+&&',
+)
+
+
+def _env_bool(name, default=False):
+    return os.getenv(name, str(default)).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def _env_list(name, default):
+    raw = os.getenv(name, '')
+    if not raw.strip():
+        return list(default)
+    return [item.strip() for item in raw.split(',') if item.strip()]
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = _env_bool('DJANGO_DEBUG', False)
 
-ALLOWED_HOSTS = ['www.lian-yolo.com', 'lian-yolo.com']
-CSRF_TRUSTED_ORIGINS = ['https://www.lian-yolo.com', 'https://lian-yolo.com']
-STATIC_URL = "static/"
+ALLOWED_HOSTS = _env_list('DJANGO_ALLOWED_HOSTS',
+                          ['www.lian-yolo.com', 'lian-yolo.com'])
+CSRF_TRUSTED_ORIGINS = _env_list('DJANGO_CSRF_TRUSTED_ORIGINS',
+                                 ['https://www.lian-yolo.com', 'https://lian-yolo.com'])
+
+# 微信小程序的 AppID / AppSecret，请在服务器环境变量中设置，不要写进代码。
+WEIXIN_MINIPROGRAM_APP_ID = os.getenv('WEIXIN_MINIPROGRAM_APP_ID', '')
+WEIXIN_MINIPROGRAM_APP_SECRET = os.getenv('WEIXIN_MINIPROGRAM_APP_SECRET', '')
+
+STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")   # collected by collectstatic
+
+# ---------------------------------------------------------------------------
+# 媒体文件（用户头像）
+# ---------------------------------------------------------------------------
+# 头像的存储路径由 models.user_avatar_path 决定，返回的是相对路径
+# 'avatars/weixin/<openid>/<随机名>.<ext>'。
+# 线上 nginx 用 `location /avatars/ { alias /root/lian-yolo.com/backend/avatars/; }`
+# 对外提供，而 gunicorn 的工作目录正好是 backend/，因此历史数据落盘在
+# backend/avatars/weixin/... ，对外 URL 形如 /avatars/weixin/... 。
+# 这里把这两个隐式约定显式写出来：MEDIA_ROOT 指向 backend/，MEDIA_URL 用根路径，
+# 落盘位置与对外 URL 与线上完全一致（不会产生 avatars/avatars 这种叠加）。
+MEDIA_ROOT = BASE_DIR
+MEDIA_URL = '/'
+
 
 
 # Application definition
@@ -40,8 +77,23 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'weixin_miniprogram',
 ]
+
+# 小程序只消费 JSON，关掉 DRF 的 HTML 渲染（Browsable API 不再暴露）。
+# 这样 /weixin-miniprogram/api/ 下的响应格式是确定的 JSON，不会因为
+# 请求头不同而变成 HTML 页面。
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.FormParser',
+    ],
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -115,14 +167,9 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
-
-STATIC_URL = 'static/'
-
-
 LOG_DIR = BASE_DIR / 'logs'
-LOG_DIR.mkdir(exist_ok=True)
+if not LOG_DIR.exists():
+    LOG_DIR.mkdir()
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
